@@ -1,0 +1,79 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Lazarus
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: |
+        A clear and concise description of what the problem is.
+        Example: "I'm frustrated when [...] because [...]"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: A clear and concise description of what you want to happen...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or features?
+      placeholder: Describe any alternative solutions or workarounds you've considered...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my workflow
+        - High - Blocking my work
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your specific use case for this feature.
+      placeholder: |
+        Help us understand how you would use this feature in practice.
+        Example: "When working on [...], I need to [...] so that [...]"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, mockups, or examples about the feature request.
+      placeholder: Any additional information that might be helpful...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute to this feature?
+      options:
+        - label: I would be willing to submit a PR to implement this feature
+          required: false
