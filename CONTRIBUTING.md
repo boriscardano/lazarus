@@ -5,9 +5,9 @@ Thank you for your interest in contributing to Lazarus! This document provides g
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/lazarus.git`
-3. Create a virtual environment: `python -m venv venv && source venv/bin/activate`
-4. Install development dependencies: `pip install -e ".[dev]"`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/lazarus.git`
+3. Create a virtual environment: `uv venv && source .venv/bin/activate`
+4. Install development dependencies: `uv pip install -e ".[dev]"`
 5. Create a feature branch: `git checkout -b feature/your-feature-name`
 
 ## Development Setup

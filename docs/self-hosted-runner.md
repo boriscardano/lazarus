@@ -67,7 +67,7 @@ curl -s https://raw.githubusercontent.com/actions/runner/main/...  # See OS-spec
 ./config.sh --url https://github.com/YOUR_ORG/YOUR_REPO --token YOUR_TOKEN
 
 # 3. Install Lazarus
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # 4. Authenticate
 claude auth login
@@ -424,7 +424,7 @@ Generate a new token from GitHub:
 **Lazarus command not found:**
 ```bash
 # Install Lazarus
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # Or activate virtual environment
 source ~/claude-env/bin/activate

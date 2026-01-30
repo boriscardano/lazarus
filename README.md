@@ -19,11 +19,11 @@ Lazarus automatically detects failing scripts, uses AI to diagnose and fix issue
 ### Installation
 
 ```bash
-# Using pip
-pip install lazarus-heal
+# Using uv (recommended)
+uv pip install lazarus-heal
 
 # Or install from source using our installation script
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 ./scripts/install.sh
 
@@ -51,6 +51,9 @@ lazarus run ./scripts/my_script.sh
 
 # Heal a specific failing script
 lazarus heal ./scripts/broken_script.py
+
+# Diagnose a script without making changes (read-only analysis)
+lazarus diagnose ./scripts/failing_script.py
 
 # Check prerequisites
 lazarus check
@@ -155,6 +158,7 @@ jobs:
 |---------|-------------|
 | `lazarus heal <script>` | Attempt to heal a specific script |
 | `lazarus run <script>` | Run script, automatically heal if it fails |
+| `lazarus diagnose <script>` | Analyze a script without making changes (read-only) |
 | `lazarus history` | View healing history and results |
 | `lazarus validate` | Validate lazarus.yaml configuration |
 | `lazarus init` | Create a new lazarus.yaml template |

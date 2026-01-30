@@ -23,12 +23,12 @@ We take the security of Lazarus seriously. If you discover a security vulnerabil
 Instead, please report security issues via one of these methods:
 
 1. **GitHub Security Advisories** (Preferred):
-   - Go to the [Security tab](https://github.com/yourusername/lazarus/security/advisories)
+   - Go to the [Security tab](https://github.com/boriscardano/lazarus/security/advisories)
    - Click "Report a vulnerability"
    - Fill out the advisory form with details
 
 2. **Email**:
-   - Send an email to: security@yourdomain.com
+   - Send an email to: security@lazarus-heal.dev
    - Use PGP encryption if possible (key available on request)
    - Include "LAZARUS SECURITY" in the subject line
 
@@ -305,13 +305,13 @@ We thank the following researchers for responsibly disclosing security issues:
 ## Contact
 
 For security issues:
-- **GitHub Security Advisories**: https://github.com/yourusername/lazarus/security/advisories
-- **Email**: security@yourdomain.com
+- **GitHub Security Advisories**: https://github.com/boriscardano/lazarus/security/advisories
+- **Email**: security@lazarus-heal.dev
 - **PGP Key**: Available on request
 
 For general questions:
-- **GitHub Issues**: https://github.com/yourusername/lazarus/issues
-- **GitHub Discussions**: https://github.com/yourusername/lazarus/discussions
+- **GitHub Issues**: https://github.com/boriscardano/lazarus/issues
+- **GitHub Discussions**: https://github.com/boriscardano/lazarus/discussions
 
 ---
 

@@ -27,10 +27,10 @@ Common issues and solutions when using Lazarus.
 
 ```bash
 # Verify installation
-pip show lazarus-heal
+uv pip show lazarus-heal
 
 # If not installed:
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # If installed but not in PATH, try:
 python -m lazarus --help
@@ -47,13 +47,13 @@ pipx install lazarus-heal
 
 ```bash
 # Reinstall with dependencies
-pip uninstall lazarus-heal
-pip install --force-reinstall lazarus-heal
+uv pip uninstall lazarus-heal
+uv pip install --force-reinstall lazarus-heal
 
 # Or install from source:
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
-pip install -e .
+uv pip install -e .
 ```
 
 ### Problem: Python version incompatibility
@@ -85,12 +85,12 @@ pyenv global 3.12.0
 
 ```bash
 # Install for user only (recommended):
-pip install --user lazarus-heal
+uv pip install --user lazarus-heal
 
 # Or use a virtual environment:
 python -m venv venv
 source venv/bin/activate
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # Or use pipx:
 pipx install lazarus-heal
@@ -780,17 +780,17 @@ lazarus check
 
 ### Where to Get Support
 
-1. **GitHub Issues**: [https://github.com/yourusername/lazarus/issues](https://github.com/yourusername/lazarus/issues)
+1. **GitHub Issues**: [https://github.com/boriscardano/lazarus/issues](https://github.com/boriscardano/lazarus/issues)
    - Search existing issues first
    - Include diagnostic information
    - Provide minimal reproduction example
 
-2. **GitHub Discussions**: [https://github.com/yourusername/lazarus/discussions](https://github.com/yourusername/lazarus/discussions)
+2. **GitHub Discussions**: [https://github.com/boriscardano/lazarus/discussions](https://github.com/boriscardano/lazarus/discussions)
    - Ask questions
    - Share use cases
    - Request features
 
-3. **Documentation**: [https://github.com/yourusername/lazarus#readme](https://github.com/yourusername/lazarus#readme)
+3. **Documentation**: [https://github.com/boriscardano/lazarus#readme](https://github.com/boriscardano/lazarus#readme)
    - README
    - Getting Started guide
    - Configuration reference
@@ -800,7 +800,7 @@ lazarus check
 ### Before Opening an Issue
 
 - [ ] Check existing issues and discussions
-- [ ] Update to latest version: `pip install --upgrade lazarus-heal`
+- [ ] Update to latest version: `uv pip install --upgrade lazarus-heal`
 - [ ] Verify prerequisites: `lazarus check`
 - [ ] Validate configuration: `lazarus validate`
 - [ ] Try with `--verbose` flag

@@ -7,14 +7,14 @@ Get up and running with Lazarus in 5 minutes.
 ### Option A: From PyPI (Recommended for Users)
 
 ```bash
-pip install lazarus-heal
+uv pip install lazarus-heal
 ```
 
 ### Option B: From Source (Recommended for Contributors)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 
 # Run the installation script
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Lazarus
-        run: pip install lazarus-heal
+        run: uv pip install lazarus-heal
 
       - name: Run healing
         run: lazarus run ./scripts/critical_job.py
@@ -249,8 +249,8 @@ lazarus validate
 ## Getting Help
 
 - Documentation: [docs/](docs/)
-- Issues: https://github.com/yourusername/lazarus/issues
-- Discussions: https://github.com/yourusername/lazarus/discussions
+- Issues: https://github.com/boriscardano/lazarus/issues
+- Discussions: https://github.com/boriscardano/lazarus/discussions
 
 ## Updating Lazarus
 
@@ -258,8 +258,8 @@ lazarus validate
 # Update to latest version
 ./scripts/update.sh
 
-# Or via pip
-pip install --upgrade lazarus-heal
+# Or via uv
+uv pip install --upgrade lazarus-heal
 ```
 
 ## Uninstalling

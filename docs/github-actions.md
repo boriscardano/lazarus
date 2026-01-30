@@ -390,7 +390,7 @@ For optimal performance, use self-hosted runners with Lazarus pre-installed.
 
 ```bash
 # Install Lazarus
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # Setup launchd service
 cp runner-setup/macos-launchd.plist ~/Library/LaunchAgents/
@@ -401,7 +401,7 @@ launchctl load ~/Library/LaunchAgents/lazarus.runner.plist
 
 ```bash
 # Install Lazarus
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # Setup systemd service
 sudo cp runner-setup/linux-systemd.service /etc/systemd/system/lazarus-runner.service
@@ -614,6 +614,6 @@ gh run download <run-id>
 ## Support
 
 For help with GitHub Actions integration:
-- [GitHub Issues](https://github.com/yourusername/lazarus/issues)
-- [Discussions](https://github.com/yourusername/lazarus/discussions)
-- [Documentation](https://github.com/yourusername/lazarus/docs)
+- [GitHub Issues](https://github.com/boriscardano/lazarus/issues)
+- [Discussions](https://github.com/boriscardano/lazarus/discussions)
+- [Documentation](https://github.com/boriscardano/lazarus/docs)

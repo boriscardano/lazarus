@@ -78,11 +78,11 @@ Lazarus is compatible with:
 
 ## Installation
 
-### Option 1: Install via pip (Recommended)
+### Option 1: Install via uv (Recommended)
 
 ```bash
-# Install from PyPI
-pip install lazarus-heal
+# Install from PyPI using uv
+uv pip install lazarus-heal
 
 # Verify installation
 lazarus --version
@@ -92,14 +92,17 @@ lazarus --version
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create a virtual environment (using uv - recommended)
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install in development mode
+uv pip install -e .
+
+# Or with pip
 pip install -e .
 
 # Verify installation
@@ -332,12 +335,13 @@ Now that you have Lazarus running, explore these topics:
 ### CLI Commands
 - `lazarus heal <script>` - Heal a specific failing script
 - `lazarus run <script>` - Run a script with automatic healing
+- `lazarus diagnose <script>` - Analyze a script without making changes (read-only)
 - `lazarus history` - View healing history
 - `lazarus validate` - Validate your configuration
 - `lazarus init` - Create configuration template
 - `lazarus check` - Verify prerequisites
 
 ### Community
-- [GitHub Issues](https://github.com/yourusername/lazarus/issues) - Report bugs or request features
+- [GitHub Issues](https://github.com/boriscardano/lazarus/issues) - Report bugs or request features
 - [Contributing Guide](../CONTRIBUTING.md) - Contribute to Lazarus
 - [FAQ](faq.md) - Frequently asked questions
