@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/boriscardano/lazarus/discussions
+    about: Please use GitHub Discussions for questions, ideas, and general discussion
+  - name: Documentation
+    url: https://github.com/boriscardano/lazarus/blob/main/README.md
+    about: Check the documentation for help and guides

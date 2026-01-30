@@ -1,5 +1,9 @@
 # Lazarus
 
+[![CI](https://github.com/boriscardano/lazarus/actions/workflows/ci.yml/badge.svg)](https://github.com/boriscardano/lazarus/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Self-healing script runner powered by Claude Code**
 
 Lazarus automatically detects failing scripts, uses AI to diagnose and fix issues, creates pull requests with the fixes, and notifies you of the results. It's designed to run as part of your CI/CD pipeline or as a scheduled maintenance tool.
