@@ -19,10 +19,10 @@ Lazarus automatically detects failing scripts, uses AI to diagnose and fix issue
 ### Installation
 
 ```bash
-# Using pip
-pip install lazarus-heal
+# Using uv (recommended)
+uv pip install lazarus-heal
 
-# Or install from source using our installation script (uses uv by default)
+# Or install from source using our installation script
 git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 ./scripts/install.sh

@@ -78,11 +78,11 @@ Lazarus is compatible with:
 
 ## Installation
 
-### Option 1: Install via pip (Recommended)
+### Option 1: Install via uv (Recommended)
 
 ```bash
-# Install from PyPI
-pip install lazarus-heal
+# Install from PyPI using uv
+uv pip install lazarus-heal
 
 # Verify installation
 lazarus --version

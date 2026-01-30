@@ -90,7 +90,7 @@ Follow the [Getting Started Guide](./getting-started.md) for installation and yo
 
 ```bash
 # 1. Install
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # 2. Check prerequisites
 lazarus check

@@ -6,7 +6,7 @@ Complete reference for the Lazarus command-line interface.
 
 ```bash
 # Install from PyPI (when published)
-pip install lazarus-heal
+uv pip install lazarus-heal
 
 # Or install from source (recommended: use uv)
 git clone https://github.com/boriscardano/lazarus.git
