@@ -1,9 +1,6 @@
 """Tests for the CLI module."""
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 def test_cli_app_exists():

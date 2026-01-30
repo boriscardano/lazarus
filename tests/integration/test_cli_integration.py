@@ -6,14 +6,11 @@ command-line invocations.
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from lazarus.cli import app
-
 
 runner = CliRunner()
 

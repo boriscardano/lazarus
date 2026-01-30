@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -26,7 +25,7 @@ class ClaudeResponse:
     success: bool
     explanation: str
     files_changed: list[str]
-    error_message: Optional[str]
+    error_message: str | None
     raw_output: str
 
 
@@ -64,7 +63,7 @@ def parse_claude_output(stdout: str, stderr: str, exit_code: int) -> ClaudeRespo
                 success=False,
                 explanation="",
                 files_changed=[],
-                error_message=f"Claude Code authentication failed. Please run 'claude login' first.",
+                error_message="Claude Code authentication failed. Please run 'claude login' first.",
                 raw_output=raw_output,
             )
 

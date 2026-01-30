@@ -10,10 +10,9 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from lazarus.claude.parser import ClaudeResponse, parse_claude_output
-from lazarus.claude.prompts import build_healing_prompt, build_diagnosis_prompt
+from lazarus.claude.prompts import build_diagnosis_prompt, build_healing_prompt
 from lazarus.core.context import HealingContext
 
 
@@ -55,7 +54,7 @@ class ClaudeCodeClient:
         """
         return shutil.which("claude") is not None
 
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Get the version of the installed Claude Code CLI.
 
         Returns:
@@ -316,7 +315,7 @@ class ClaudeCodeClient:
     def request_fix_with_retry(
         self,
         context: HealingContext,
-        max_attempts: Optional[int] = None,
+        max_attempts: int | None = None,
     ) -> tuple[ClaudeResponse, int]:
         """Request a fix with automatic retry on failure.
 

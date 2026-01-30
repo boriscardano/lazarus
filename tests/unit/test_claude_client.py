@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -35,7 +34,7 @@ def test_context(temp_working_dir):
             stdout="",
             stderr="SyntaxError",
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(
@@ -191,7 +190,7 @@ def test_get_allowed_tools_from_config(temp_working_dir):
         script_content="",
         execution_result=ExecutionResult(
             exit_code=1, stdout="", stderr="", duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(
@@ -221,7 +220,7 @@ def test_get_allowed_tools_with_forbidden(temp_working_dir):
         script_content="",
         execution_result=ExecutionResult(
             exit_code=1, stdout="", stderr="", duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(

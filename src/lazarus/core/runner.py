@@ -9,9 +9,8 @@ from __future__ import annotations
 import os
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
 
 from lazarus.config.schema import LazarusConfig, ScriptConfig
 from lazarus.core.context import ExecutionResult
@@ -47,8 +46,8 @@ class ScriptRunner:
     def run_script(
         self,
         script_path: Path,
-        working_dir: Optional[Path] = None,
-        env: Optional[dict[str, str]] = None,
+        working_dir: Path | None = None,
+        env: dict[str, str] | None = None,
         timeout: int = 300,
     ) -> ExecutionResult:
         """Run a script and capture its execution result.
@@ -100,7 +99,7 @@ class ScriptRunner:
 
         # Execute the script
         start_time = time.time()
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         try:
             result = subprocess.run(
@@ -151,7 +150,7 @@ class ScriptRunner:
         self,
         script_path: Path,
         previous_result: ExecutionResult,
-        config: Optional[ScriptConfig] = None,
+        config: ScriptConfig | None = None,
     ) -> VerificationResult:
         """Verify that a script fix was successful by re-running the script.
 
@@ -178,7 +177,7 @@ class ScriptRunner:
         working_dir = config.working_dir if config else None
 
         # Prepare environment with required variables
-        env: Optional[dict[str, str]] = None
+        env: dict[str, str] | None = None
         if config and config.environment:
             env = {}
             for var_name in config.environment:
@@ -197,7 +196,7 @@ class ScriptRunner:
         comparison = compare_errors(previous_result, current_result)
 
         # Check custom success criteria if provided
-        custom_criteria_passed: Optional[bool] = None
+        custom_criteria_passed: bool | None = None
         if config and config.success_criteria:
             custom_criteria_passed = check_custom_criteria(
                 current_result, config.success_criteria
@@ -261,7 +260,7 @@ class ScriptRunner:
 
         # Check shebang line
         try:
-            with open(script_path, "r", encoding="utf-8") as f:
+            with open(script_path, encoding="utf-8") as f:
                 first_line = f.readline().strip()
 
             if first_line.startswith("#!"):
@@ -335,7 +334,7 @@ class ScriptRunner:
         self,
         current_result: ExecutionResult,
         comparison: ErrorComparison,
-        custom_criteria_passed: Optional[bool],
+        custom_criteria_passed: bool | None,
     ) -> str:
         """Determine the verification status based on execution result and comparison.
 

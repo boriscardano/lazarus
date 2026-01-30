@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from lazarus.claude.parser import (
-    ClaudeResponse,
     _extract_changed_files,
     _extract_explanation,
     parse_claude_output,

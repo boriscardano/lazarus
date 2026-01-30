@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -274,7 +273,7 @@ class GitOperations:
     def push(
         self,
         remote: str = "origin",
-        branch: Optional[str] = None,
+        branch: str | None = None,
         set_upstream: bool = False,
     ) -> bool:
         """Push commits to remote repository.
@@ -365,7 +364,7 @@ class GitOperations:
         logger.debug("Branch %s exists: %s", branch_name, exists)
         return exists
 
-    def get_remote_url(self, remote: str = "origin") -> Optional[str]:
+    def get_remote_url(self, remote: str = "origin") -> str | None:
         """Get the URL of a remote.
 
         Args:
@@ -387,7 +386,7 @@ class GitOperations:
         logger.debug("Remote %s not found", remote)
         return None
 
-    def stash_changes(self, message: Optional[str] = None) -> bool:
+    def stash_changes(self, message: str | None = None) -> bool:
         """Stash uncommitted changes.
 
         Args:

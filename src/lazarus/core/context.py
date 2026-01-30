@@ -12,9 +12,8 @@ import platform
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from lazarus.config.schema import LazarusConfig
 
@@ -34,7 +33,7 @@ class ExecutionResult:
     stdout: str
     stderr: str
     duration: float
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def success(self) -> bool:
@@ -57,7 +56,7 @@ class CommitInfo:
     author: str
     date: str
     message: str
-    diff: Optional[str] = None
+    diff: str | None = None
 
 
 @dataclass
@@ -132,13 +131,13 @@ class HealingContext:
     script_path: Path
     script_content: str
     execution_result: ExecutionResult
-    git_context: Optional[GitContext]
+    git_context: GitContext | None
     system_context: SystemContext
     config: LazarusConfig
     previous_attempts: list[PreviousAttempt] = field(default_factory=list)
 
 
-def get_git_context(repo_path: Path) -> Optional[GitContext]:
+def get_git_context(repo_path: Path) -> GitContext | None:
     """Collect git context from a repository.
 
     Args:
@@ -240,7 +239,7 @@ def get_git_context(repo_path: Path) -> Optional[GitContext]:
         if result.returncode == 0 and result.stdout.strip():
             untracked = result.stdout.strip().split("\n")
             if untracked:
-                uncommitted_changes += f"\n\n# Untracked files:\n"
+                uncommitted_changes += "\n\n# Untracked files:\n"
                 for file in untracked:
                     uncommitted_changes += f"# {file}\n"
 

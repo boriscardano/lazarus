@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
-
-import pytest
 
 from lazarus.core.healer import HealingResult
 from lazarus.logging.history import HealingHistory, HistoryRecord
@@ -165,7 +163,7 @@ class TestHealingHistory:
         history = HealingHistory(history_dir=history_dir)
 
         # Create three records with different timestamps
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         records_data = [
             {
                 "id": "old",
@@ -212,7 +210,7 @@ class TestHealingHistory:
         history = HealingHistory(history_dir=history_dir)
 
         # Create multiple records
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for i in range(5):
             record_data = {
                 "id": f"record-{i}",
@@ -236,7 +234,7 @@ class TestHealingHistory:
         history = HealingHistory(history_dir=history_dir)
 
         # Create records for different scripts
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         records_data = [
             {
                 "id": "backup-1",
@@ -283,7 +281,7 @@ class TestHealingHistory:
         # Create a record
         record_data = {
             "id": "test-id",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "script_path": "/test/script.py",
             "success": True,
             "attempts_count": 2,
@@ -316,7 +314,7 @@ class TestHealingHistory:
         history = HealingHistory(history_dir=history_dir)
 
         # Create records: 3 successful, 2 failed
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for i in range(5):
             record_data = {
                 "id": f"record-{i}",
@@ -349,7 +347,7 @@ class TestHealingHistory:
         history = HealingHistory(history_dir=history_dir)
 
         # Create old and new records
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         old_time = now - timedelta(days=60)
         recent_time = now - timedelta(days=10)
 

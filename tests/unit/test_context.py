@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -11,10 +11,8 @@ import pytest
 
 from lazarus.config.schema import LazarusConfig
 from lazarus.core.context import (
-    CommitInfo,
     ExecutionResult,
     GitContext,
-    HealingContext,
     SystemContext,
     build_context,
     get_git_context,
@@ -54,7 +52,7 @@ class TestExecutionResult:
 
     def test_execution_result_custom_timestamp(self):
         """Test execution result with custom timestamp."""
-        custom_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        custom_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
         result = ExecutionResult(
             exit_code=0,
             stdout="",

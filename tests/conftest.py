@@ -6,10 +6,9 @@ and e2e tests.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -65,7 +64,7 @@ def sample_execution_result_success() -> ExecutionResult:
         stdout="Test completed successfully",
         stderr="",
         duration=1.5,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -81,7 +80,7 @@ def sample_execution_result_failure() -> ExecutionResult:
         stdout="Test output",
         stderr="Error: Something went wrong\nTraceback (most recent call last):\n  File 'test.py', line 10\n    x = undefined_var\nNameError: name 'undefined_var' is not defined",
         duration=0.5,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 

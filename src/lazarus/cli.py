@@ -11,7 +11,6 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -48,7 +47,7 @@ def heal(
         dir_okay=False,
         resolve_path=True,
     ),
-    max_attempts: Optional[int] = typer.Option(
+    max_attempts: int | None = typer.Option(
         None,
         "--max-attempts",
         "-n",
@@ -56,7 +55,7 @@ def heal(
         min=1,
         max=10,
     ),
-    timeout: Optional[int] = typer.Option(
+    timeout: int | None = typer.Option(
         None,
         "--timeout",
         "-t",
@@ -79,7 +78,7 @@ def heal(
         "-v",
         help="Show detailed output",
     ),
-    config_path: Optional[Path] = typer.Option(
+    config_path: Path | None = typer.Option(
         None,
         "--config",
         "-c",
@@ -203,7 +202,7 @@ def run(
         dir_okay=False,
         resolve_path=True,
     ),
-    max_attempts: Optional[int] = typer.Option(
+    max_attempts: int | None = typer.Option(
         None,
         "--max-attempts",
         "-n",
@@ -211,7 +210,7 @@ def run(
         min=1,
         max=10,
     ),
-    timeout: Optional[int] = typer.Option(
+    timeout: int | None = typer.Option(
         None,
         "--timeout",
         "-t",
@@ -229,7 +228,7 @@ def run(
         "-v",
         help="Show detailed output",
     ),
-    config_path: Optional[Path] = typer.Option(
+    config_path: Path | None = typer.Option(
         None,
         "--config",
         "-c",
@@ -268,7 +267,7 @@ def history(
         min=1,
         max=100,
     ),
-    script: Optional[str] = typer.Option(
+    script: str | None = typer.Option(
         None,
         "--script",
         "-s",
@@ -324,7 +323,7 @@ def history(
 
 @app.command()
 def validate(
-    config_path: Optional[Path] = typer.Argument(
+    config_path: Path | None = typer.Argument(
         None,
         help="Path to lazarus.yaml (auto-detected if not provided)",
         exists=True,
@@ -401,7 +400,7 @@ def init(
         "--full",
         help="Create full configuration template with all options",
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(
         None,
         "--output",
         "-o",
@@ -471,7 +470,7 @@ def diagnose(
         "-v",
         help="Show detailed output",
     ),
-    config_path: Optional[Path] = typer.Option(
+    config_path: Path | None = typer.Option(
         None,
         "--config",
         "-c",

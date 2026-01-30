@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
-from datetime import datetime, timezone
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from datetime import UTC, datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -42,7 +41,7 @@ class JSONFormatter(logging.Formatter):
             JSON string representing the log record
         """
         log_data: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -226,8 +225,8 @@ class LazarusLogger:
     def log_error(
         self,
         message: str,
-        script_path: Optional[Path] = None,
-        details: Optional[dict[str, Any]] = None,
+        script_path: Path | None = None,
+        details: dict[str, Any] | None = None,
         exc_info: bool = False,
     ) -> None:
         """Log an error message.

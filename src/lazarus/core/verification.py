@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from lazarus.core.context import ExecutionResult
 
@@ -43,7 +43,7 @@ class VerificationResult:
     status: Literal["success", "same_error", "different_error", "timeout"]
     execution_result: ExecutionResult
     comparison: ErrorComparison
-    custom_criteria_passed: Optional[bool]
+    custom_criteria_passed: bool | None
 
 
 def compare_errors(previous: ExecutionResult, current: ExecutionResult) -> ErrorComparison:
