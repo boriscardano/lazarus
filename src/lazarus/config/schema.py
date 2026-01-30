@@ -6,13 +6,12 @@ import re
 from enum import Enum
 from ipaddress import AddressValueError, ip_address
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 from urllib.parse import urlparse
 
 from pydantic import (
     BaseModel,
     Field,
-    HttpUrl,
     field_validator,
     model_validator,
 )
@@ -58,10 +57,10 @@ class ScriptConfig(BaseModel):
 
     name: str = Field(description="Human-readable name for the script")
     path: Path = Field(description="Path to the script file")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, description="Description of what the script does"
     )
-    schedule: Optional[str] = Field(
+    schedule: str | None = Field(
         default=None,
         description="Cron schedule expression (e.g., '0 */6 * * *')",
     )
@@ -69,10 +68,10 @@ class ScriptConfig(BaseModel):
         default=ScriptType.OTHER,
         description="Type of script for timeout defaults"
     )
-    timeout: Optional[int] = Field(
+    timeout: int | None = Field(
         default=None, ge=1, le=86400, description="Execution timeout in seconds"
     )
-    working_dir: Optional[Path] = Field(
+    working_dir: Path | None = Field(
         default=None, description="Working directory for script execution"
     )
     allowed_files: list[str] = Field(
@@ -89,20 +88,20 @@ class ScriptConfig(BaseModel):
     setup_commands: list[str] = Field(
         default_factory=list, description="Commands to run before script execution"
     )
-    custom_prompt: Optional[str] = Field(
+    custom_prompt: str | None = Field(
         default=None, description="Additional context for Claude Code"
     )
     idempotent: bool = Field(
         default=True, description="Whether the script is safe to re-run"
     )
-    success_criteria: Optional[dict[str, Any]] = Field(
+    success_criteria: dict[str, Any] | None = Field(
         default=None,
         description="Custom success validation (e.g., {'contains': 'Success'})",
     )
 
     @field_validator("schedule")
     @classmethod
-    def validate_schedule(cls, v: Optional[str]) -> Optional[str]:
+    def validate_schedule(cls, v: str | None) -> str | None:
         """Validate cron schedule format."""
         if v is None:
             return v
@@ -115,7 +114,7 @@ class ScriptConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def set_default_timeout(self) -> "ScriptConfig":
+    def set_default_timeout(self) -> ScriptConfig:
         """Set timeout based on script_type if not explicitly provided."""
         if self.timeout is None:
             self.timeout = DEFAULT_TIMEOUTS[self.script_type]
@@ -180,7 +179,7 @@ class SlackConfig(BaseModel):
     """
 
     webhook_url: Annotated[str, Field(description="Slack webhook URL")]
-    channel: Optional[str] = Field(default=None, description="Channel override")
+    channel: str | None = Field(default=None, description="Channel override")
     on_success: bool = Field(default=True, description="Notify on success")
     on_failure: bool = Field(default=True, description="Notify on failure")
 
@@ -328,10 +327,10 @@ class EmailConfig(BaseModel):
 
     smtp_host: str = Field(description="SMTP server hostname")
     smtp_port: int = Field(default=587, ge=1, le=65535, description="SMTP port")
-    username: Optional[str] = Field(
+    username: str | None = Field(
         default=None, description="SMTP username (supports ${ENV_VAR})"
     )
-    password: Optional[str] = Field(
+    password: str | None = Field(
         default=None, description="SMTP password (supports ${ENV_VAR})"
     )
     from_addr: str = Field(description="Sender email address")
@@ -454,15 +453,15 @@ class NotificationConfig(BaseModel):
         webhook: Optional custom webhook notification configuration
     """
 
-    slack: Optional[SlackConfig] = Field(default=None, description="Slack notifications")
-    discord: Optional[DiscordConfig] = Field(
+    slack: SlackConfig | None = Field(default=None, description="Slack notifications")
+    discord: DiscordConfig | None = Field(
         default=None, description="Discord notifications"
     )
-    email: Optional[EmailConfig] = Field(default=None, description="Email notifications")
-    github_issues: Optional[GitHubIssuesConfig] = Field(
+    email: EmailConfig | None = Field(default=None, description="Email notifications")
+    github_issues: GitHubIssuesConfig | None = Field(
         default=None, description="GitHub Issues notifications"
     )
-    webhook: Optional[WebhookConfig] = Field(
+    webhook: WebhookConfig | None = Field(
         default=None, description="Custom webhook notifications"
     )
 
@@ -490,13 +489,13 @@ class GitConfig(BaseModel):
     auto_merge: bool = Field(
         default=False, description="Enable auto-merge if checks pass"
     )
-    commit_message_template: Optional[str] = Field(
+    commit_message_template: str | None = Field(
         default=None, description="Template for commit messages"
     )
-    pr_title_template: Optional[str] = Field(
+    pr_title_template: str | None = Field(
         default=None, description="Template for PR titles"
     )
-    pr_body_template: Optional[str] = Field(
+    pr_body_template: str | None = Field(
         default=None, description="Template for PR bodies"
     )
 
@@ -574,7 +573,7 @@ class LoggingConfig(BaseModel):
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         description="Log format string",
     )
-    file: Optional[Path] = Field(default=None, description="Log file path")
+    file: Path | None = Field(default=None, description="Log file path")
     rotation: int = Field(
         default=10, ge=0, le=1000, description="Log rotation size in MB"
     )

@@ -8,9 +8,7 @@ before it's sent to Claude or logged.
 from __future__ import annotations
 
 import re
-from copy import deepcopy
 from dataclasses import replace
-from typing import Optional
 
 from lazarus.config.schema import LazarusConfig
 from lazarus.core.context import (
@@ -18,6 +16,7 @@ from lazarus.core.context import (
     ExecutionResult,
     GitContext,
     HealingContext,
+    PreviousAttempt,
     SystemContext,
 )
 
@@ -152,8 +151,8 @@ def redact_commit_info(commit: CommitInfo, redactor: Redactor) -> CommitInfo:
 
 
 def redact_git_context(
-    git_context: Optional[GitContext], redactor: Redactor
-) -> Optional[GitContext]:
+    git_context: GitContext | None, redactor: Redactor
+) -> GitContext | None:
     """Redact sensitive information from git context.
 
     Args:
@@ -197,6 +196,28 @@ def redact_system_context(
     )
 
 
+def redact_previous_attempt(
+    attempt: PreviousAttempt, redactor: Redactor
+) -> PreviousAttempt:
+    """Redact sensitive information from a previous healing attempt.
+
+    The error_after field can contain secrets from stdout/stderr of failed
+    attempts, so we need to redact it to prevent secret leakage.
+
+    Args:
+        attempt: Previous attempt to redact
+        redactor: Redactor instance to use
+
+    Returns:
+        New PreviousAttempt with redacted error_after and claude_response_summary
+    """
+    return replace(
+        attempt,
+        error_after=redactor.redact(attempt.error_after),
+        claude_response_summary=redactor.redact(attempt.claude_response_summary),
+    )
+
+
 def redact_context(context: HealingContext) -> HealingContext:
     """Redact sensitive information from complete healing context.
 
@@ -226,6 +247,12 @@ def redact_context(context: HealingContext) -> HealingContext:
     # Redact system context
     redacted_system_context = redact_system_context(context.system_context, redactor)
 
+    # Redact previous attempts
+    redacted_previous_attempts = [
+        redact_previous_attempt(attempt, redactor)
+        for attempt in context.previous_attempts
+    ]
+
     # Create new context with redacted data
     return replace(
         context,
@@ -233,6 +260,7 @@ def redact_context(context: HealingContext) -> HealingContext:
         execution_result=redacted_execution_result,
         git_context=redacted_git_context,
         system_context=redacted_system_context,
+        previous_attempts=redacted_previous_attempts,
     )
 
 

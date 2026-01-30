@@ -7,8 +7,6 @@ import logging
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from lazarus.config.schema import LoggingConfig
 from lazarus.core.healer import HealingResult
 from lazarus.logging.logger import JSONFormatter, LazarusLogger

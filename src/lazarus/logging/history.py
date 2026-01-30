@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from lazarus.core.healer import HealingResult
 
@@ -38,8 +38,8 @@ class HistoryRecord:
     success: bool
     attempts_count: int
     duration: float
-    pr_url: Optional[str] = None
-    error_summary: Optional[str] = None
+    pr_url: str | None = None
+    error_summary: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert record to dictionary for JSON serialization.
@@ -100,7 +100,7 @@ class HealingHistory:
         self.history_dir.mkdir(parents=True, exist_ok=True)
 
     @classmethod
-    def find_history_dir(cls, start_path: Optional[Path] = None) -> Optional[Path]:
+    def find_history_dir(cls, start_path: Path | None = None) -> Path | None:
         """Search for .lazarus-history directory starting from start_path and going up.
 
         This method searches for an existing .lazarus-history directory by walking
@@ -151,7 +151,7 @@ class HealingHistory:
         record_id = str(uuid.uuid4())
 
         # Create timestamp
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
 
         # Create error summary if healing failed
         error_summary = None
@@ -187,7 +187,7 @@ class HealingHistory:
     def get_history(
         self,
         limit: int = 10,
-        script_filter: Optional[str] = None,
+        script_filter: str | None = None,
     ) -> list[HistoryRecord]:
         """Get healing history records.
 
@@ -235,7 +235,7 @@ class HealingHistory:
         # Apply limit
         return records[:limit]
 
-    def get_record(self, record_id: str) -> Optional[HistoryRecord]:
+    def get_record(self, record_id: str) -> HistoryRecord | None:
         """Get a specific healing history record by ID.
 
         Args:
@@ -261,7 +261,7 @@ class HealingHistory:
         except (json.JSONDecodeError, KeyError, ValueError):
             return None
 
-    def get_success_rate(self, script_filter: Optional[str] = None) -> float:
+    def get_success_rate(self, script_filter: str | None = None) -> float:
         """Calculate success rate for healing sessions.
 
         Args:
@@ -299,7 +299,7 @@ class HealingHistory:
         """
         from datetime import timedelta
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         removed = 0
 
         for record_file in self.history_dir.glob("*.json"):

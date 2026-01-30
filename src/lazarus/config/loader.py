@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import yaml
 from pydantic import ValidationError
@@ -57,7 +57,7 @@ def expand_env_vars(data: Any) -> Any:
         return data
 
 
-def find_config_file(start_path: Optional[Path] = None) -> Optional[Path]:
+def find_config_file(start_path: Path | None = None) -> Path | None:
     """Find lazarus.yaml in current directory or parent directories.
 
     Args:
@@ -87,7 +87,7 @@ def find_config_file(start_path: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def load_config(path: Optional[Union[Path, str]] = None) -> LazarusConfig:
+def load_config(path: Path | str | None = None) -> LazarusConfig:
     """Load and validate Lazarus configuration.
 
     Args:
@@ -119,7 +119,7 @@ def load_config(path: Optional[Union[Path, str]] = None) -> LazarusConfig:
 
     # Load YAML
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             raw_data = yaml.safe_load(f)
     except yaml.YAMLError as e:
         # Parse YAML error to provide helpful message
@@ -173,7 +173,7 @@ def load_config(path: Optional[Union[Path, str]] = None) -> LazarusConfig:
     return config
 
 
-def load_config_dict(path: Optional[Union[Path, str]] = None) -> dict[str, Any]:
+def load_config_dict(path: Path | str | None = None) -> dict[str, Any]:
     """Load configuration as a dictionary (useful for testing or introspection).
 
     Args:
@@ -193,7 +193,7 @@ def load_config_dict(path: Optional[Union[Path, str]] = None) -> dict[str, Any]:
         config_path = Path(path)
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             raw_data = yaml.safe_load(f)
     except (yaml.YAMLError, OSError) as e:
         raise ConfigError(f"Failed to load {config_path}: {e}") from e
@@ -204,7 +204,7 @@ def load_config_dict(path: Optional[Union[Path, str]] = None) -> dict[str, Any]:
     return expand_env_vars(raw_data)
 
 
-def validate_config_file(path: Union[Path, str]) -> tuple[bool, list[str]]:
+def validate_config_file(path: Path | str) -> tuple[bool, list[str]]:
     """Validate a configuration file without raising exceptions.
 
     Args:

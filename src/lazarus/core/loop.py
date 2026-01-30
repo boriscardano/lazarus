@@ -7,7 +7,7 @@ healing attempts, including attempt counting, timeouts, and loop control.
 from __future__ import annotations
 
 import time
-from typing import Iterator
+from collections.abc import Iterator
 
 
 class HealingLoop:

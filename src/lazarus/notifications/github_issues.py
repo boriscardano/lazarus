@@ -5,7 +5,6 @@ This module provides GitHub Issues notifications using the gh CLI tool.
 
 from __future__ import annotations
 
-import json
 import logging
 import subprocess
 from pathlib import Path
@@ -165,7 +164,7 @@ class GitHubIssueNotifier:
 
         if result.pr_url:
             lines.extend([
-                f"### Pull Request",
+                "### Pull Request",
                 "",
                 f"A pull request with attempted fixes is available: {result.pr_url}",
                 "",

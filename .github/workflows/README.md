@@ -426,6 +426,6 @@ create_pr: ${{ github.event_name == 'schedule' }}
 ## Support
 
 For issues or questions:
-- [GitHub Issues](https://github.com/yourusername/lazarus/issues)
-- [Discussions](https://github.com/yourusername/lazarus/discussions)
-- [Documentation](https://github.com/yourusername/lazarus/docs)
+- [GitHub Issues](https://github.com/boriscardano/lazarus/issues)
+- [Discussions](https://github.com/boriscardano/lazarus/discussions)
+- [Documentation](https://github.com/boriscardano/lazarus/docs)

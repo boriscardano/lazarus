@@ -5,9 +5,9 @@ Tests notification channels and dispatcher functionality.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -20,7 +20,7 @@ from lazarus.config.schema import (
     WebhookConfig,
 )
 from lazarus.core.context import ExecutionResult
-from lazarus.core.healer import HealingAttempt, HealingResult
+from lazarus.core.healer import HealingResult
 from lazarus.notifications import (
     DiscordNotifier,
     EmailNotifier,
@@ -29,7 +29,6 @@ from lazarus.notifications import (
     SlackNotifier,
     WebhookNotifier,
 )
-from lazarus.notifications.base import NotificationResult
 
 
 @pytest.fixture
@@ -40,7 +39,7 @@ def mock_execution_result() -> ExecutionResult:
         stdout="Test output",
         stderr="Error: test failed",
         duration=1.5,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 

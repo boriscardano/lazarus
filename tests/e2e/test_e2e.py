@@ -20,7 +20,6 @@ import pytest
 from lazarus.config.schema import HealingConfig, LazarusConfig
 from lazarus.core.healer import Healer
 
-
 # Custom marker for E2E tests
 pytestmark = pytest.mark.e2e
 
@@ -445,7 +444,7 @@ class TestE2EPerformance:
         assert duration < 180  # 3 minutes max for simple fix
 
         # Log performance metrics
-        print(f"\nHealing Performance:")
+        print("\nHealing Performance:")
         print(f"  Total duration: {duration:.2f}s")
         print(f"  Attempts: {len(result.attempts)}")
         if result.attempts:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Protocol
 
 from lazarus.core.healer import HealingResult
 
@@ -25,7 +25,7 @@ class NotificationResult:
 
     success: bool
     channel_name: str
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class NotificationChannel(Protocol):

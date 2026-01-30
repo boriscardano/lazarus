@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from lazarus.config.schema import LazarusConfig
 from lazarus.core.context import (
     CommitInfo,

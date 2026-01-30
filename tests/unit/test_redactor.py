@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from lazarus.config.schema import LazarusConfig, SecurityConfig
 from lazarus.core.context import (
     CommitInfo,
@@ -375,3 +373,142 @@ class TestFilterEnvironmentVariables:
         filtered = filter_environment_variables(env_vars, safe_vars)
 
         assert len(filtered) == 0
+
+
+class TestRedactPreviousAttempt:
+    """Tests for redact_previous_attempt function."""
+
+    def test_redact_previous_attempt(self):
+        """Test redacting previous attempt with secrets in error_after."""
+        from lazarus.core.context import PreviousAttempt
+        from lazarus.security.redactor import redact_previous_attempt
+
+        config = LazarusConfig()
+        redactor = Redactor.from_config(config)
+
+        attempt = PreviousAttempt(
+            attempt_number=1,
+            claude_response_summary="Tried to fix authentication with API_KEY test_key_FAKE1234567890abcdefklmn",
+            changes_made=["auth.py", "config.py"],
+            error_after="Error: Invalid token ghx_FAKE1234567890abcdefghijklmnopqrst in authentication",
+        )
+
+        redacted = redact_previous_attempt(attempt, redactor)
+
+        assert "test_key_FAKE1234567890abcdefklmn" not in redacted.claude_response_summary
+        assert "ghx_FAKE1234567890abcdefghijklmnopqrst" not in redacted.error_after
+        assert "[REDACTED:" in redacted.claude_response_summary
+        assert "[REDACTED:" in redacted.error_after
+        assert redacted.attempt_number == attempt.attempt_number
+        assert redacted.changes_made == attempt.changes_made
+
+    def test_redact_previous_attempt_no_secrets(self):
+        """Test redacting previous attempt with no secrets."""
+        from lazarus.core.context import PreviousAttempt
+        from lazarus.security.redactor import redact_previous_attempt
+
+        config = LazarusConfig()
+        redactor = Redactor.from_config(config)
+
+        attempt = PreviousAttempt(
+            attempt_number=2,
+            claude_response_summary="Fixed syntax error in main function",
+            changes_made=["main.py"],
+            error_after="SyntaxError: invalid syntax on line 42",
+        )
+
+        redacted = redact_previous_attempt(attempt, redactor)
+
+        # No secrets, so should be unchanged
+        assert redacted.claude_response_summary == attempt.claude_response_summary
+        assert redacted.error_after == attempt.error_after
+
+
+class TestRedactContextWithPreviousAttempts:
+    """Tests for redact_context function with previous attempts."""
+
+    def test_redact_context_with_previous_attempts(self):
+        """Test redacting context with previous attempts containing secrets."""
+        from lazarus.core.context import PreviousAttempt
+
+        config = LazarusConfig()
+
+        context = HealingContext(
+            script_path=Path("/script.py"),
+            script_content="import os",
+            execution_result=ExecutionResult(
+                exit_code=1,
+                stdout="",
+                stderr="Current error",
+                duration=1.0,
+            ),
+            git_context=None,
+            system_context=SystemContext(
+                os_name="Linux",
+                os_version="5.15.0",
+                python_version="3.11.0",
+                shell="/bin/bash",
+                cwd=Path("/home"),
+            ),
+            config=config,
+            previous_attempts=[
+                PreviousAttempt(
+                    attempt_number=1,
+                    claude_response_summary="Added API_KEY test_key_FAKE1234567890abcdefklmn",
+                    changes_made=["config.py"],
+                    error_after="Error: token ghx_FAKE1234567890abcdefghijklmnopqrst is invalid",
+                ),
+                PreviousAttempt(
+                    attempt_number=2,
+                    claude_response_summary="Changed password SecretPass123456",
+                    changes_made=["auth.py"],
+                    error_after="Connection failed with password=AnotherSecret999",
+                ),
+            ],
+        )
+
+        redacted = redact_context(context)
+
+        # Verify previous attempts are redacted
+        assert len(redacted.previous_attempts) == 2
+        
+        # First attempt
+        assert "test_key_FAKE1234567890abcdefklmn" not in redacted.previous_attempts[0].claude_response_summary
+        assert "ghx_FAKE1234567890abcdefghijklmnopqrst" not in redacted.previous_attempts[0].error_after
+        assert "[REDACTED:" in redacted.previous_attempts[0].claude_response_summary
+        assert "[REDACTED:" in redacted.previous_attempts[0].error_after
+        
+        # Second attempt
+        assert "SecretPass123456" not in redacted.previous_attempts[1].claude_response_summary
+        assert "AnotherSecret999" not in redacted.previous_attempts[1].error_after
+        assert "[REDACTED:" in redacted.previous_attempts[1].claude_response_summary
+        assert "[REDACTED:" in redacted.previous_attempts[1].error_after
+
+    def test_redact_context_empty_previous_attempts(self):
+        """Test redacting context with empty previous attempts list."""
+        config = LazarusConfig()
+
+        context = HealingContext(
+            script_path=Path("/script.py"),
+            script_content="print('hello')",
+            execution_result=ExecutionResult(
+                exit_code=0,
+                stdout="hello",
+                stderr="",
+                duration=0.1,
+            ),
+            git_context=None,
+            system_context=SystemContext(
+                os_name="Linux",
+                os_version="5.15.0",
+                python_version="3.11.0",
+                shell="/bin/bash",
+                cwd=Path("/home"),
+            ),
+            config=config,
+            previous_attempts=[],
+        )
+
+        redacted = redact_context(context)
+
+        assert len(redacted.previous_attempts) == 0

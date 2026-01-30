@@ -149,7 +149,7 @@ def build_healing_prompt(context: HealingContext) -> str:
                 for file in attempt.changes_made:
                     prompt_parts.append(f"  - {file}")
 
-            prompt_parts.append(f"Result: Still failed with error:")
+            prompt_parts.append("Result: Still failed with error:")
             prompt_parts.append("```")
             # Truncate very long errors
             error = attempt.error_after

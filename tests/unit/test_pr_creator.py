@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -12,8 +11,8 @@ from lazarus.claude.parser import ClaudeResponse
 from lazarus.config.schema import GitConfig
 from lazarus.core.context import ExecutionResult
 from lazarus.core.healer import HealingAttempt, HealingResult
-from lazarus.core.verification import VerificationResult, ErrorComparison
-from lazarus.git.pr import PRCreator, PRResult
+from lazarus.core.verification import ErrorComparison, VerificationResult
+from lazarus.git.pr import PRCreator
 
 
 @pytest.fixture

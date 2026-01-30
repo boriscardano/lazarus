@@ -6,18 +6,16 @@ dependencies (Claude Code, gh CLI, notifications).
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import Mock, patch
-
-import pytest
 
 from lazarus.config.schema import (
     GitConfig,
     NotificationConfig,
     SlackConfig,
 )
+from lazarus.core.context import ExecutionResult, build_context
 from lazarus.core.healer import Healer
-from lazarus.core.context import build_context
+from lazarus.core.verification import ErrorComparison, VerificationResult
 
 
 class TestFullHealingFlow:
@@ -34,28 +32,28 @@ class TestFullHealingFlow:
         with patch("lazarus.core.runner.ScriptRunner.run_script") as mock_run:
             with patch("lazarus.core.runner.ScriptRunner.verify_fix") as mock_verify:
                 # First run: script fails
-                mock_run.return_value = Mock(
+                mock_run.return_value = ExecutionResult(
                     exit_code=1,
                     stdout="",
                     stderr="NameError: name 'undefined_variable' is not defined",
                     duration=0.5,
-                    success=False,
                 )
 
                 # After fix: script succeeds
-                mock_verify.return_value = Mock(
+                mock_verify.return_value = VerificationResult(
                     status="success",
-                    execution_result=Mock(
+                    execution_result=ExecutionResult(
                         exit_code=0,
                         stdout="Success!",
                         stderr="",
                         duration=0.3,
-                        success=True,
                     ),
-                    comparison=Mock(
+                    comparison=ErrorComparison(
                         is_same_error=False,
                         similarity_score=0.0,
+                        key_differences=[],
                     ),
+                    custom_criteria_passed=None,
                 )
 
                 # Create healer and run
@@ -80,28 +78,28 @@ class TestFullHealingFlow:
         with patch("lazarus.core.runner.ScriptRunner.run_script") as mock_run:
             with patch("lazarus.core.runner.ScriptRunner.verify_fix") as mock_verify:
                 # Script keeps failing
-                mock_run.return_value = Mock(
+                mock_run.return_value = ExecutionResult(
                     exit_code=1,
                     stdout="",
                     stderr="Error: Still broken",
                     duration=0.5,
-                    success=False,
                 )
 
                 # Fix attempts don't work
-                mock_verify.return_value = Mock(
+                mock_verify.return_value = VerificationResult(
                     status="same_error",
-                    execution_result=Mock(
+                    execution_result=ExecutionResult(
                         exit_code=1,
                         stdout="",
                         stderr="Error: Still broken",
                         duration=0.5,
-                        success=False,
                     ),
-                    comparison=Mock(
+                    comparison=ErrorComparison(
                         is_same_error=True,
                         similarity_score=0.9,
+                        key_differences=[],
                     ),
+                    custom_criteria_passed=None,
                 )
 
                 # Create healer and run
@@ -123,43 +121,44 @@ class TestFullHealingFlow:
         with patch("lazarus.core.runner.ScriptRunner.run_script") as mock_run:
             with patch("lazarus.core.runner.ScriptRunner.verify_fix") as mock_verify:
                 # Initial failure
-                mock_run.return_value = Mock(
+                mock_run.return_value = ExecutionResult(
                     exit_code=1,
                     stdout="",
                     stderr="NameError: undefined_variable",
                     duration=0.5,
-                    success=False,
                 )
 
                 # Each attempt produces different error, then success
                 verify_results = [
-                    Mock(  # Attempt 1: different error
+                    VerificationResult(  # Attempt 1: different error
                         status="different_error",
-                        execution_result=Mock(
+                        execution_result=ExecutionResult(
                             exit_code=1,
                             stdout="",
                             stderr="TypeError: cannot add int and str",
                             duration=0.4,
-                            success=False,
                         ),
-                        comparison=Mock(
+                        comparison=ErrorComparison(
                             is_same_error=False,
                             similarity_score=0.3,
+                            key_differences=[],
                         ),
+                        custom_criteria_passed=None,
                     ),
-                    Mock(  # Attempt 2: success
+                    VerificationResult(  # Attempt 2: success
                         status="success",
-                        execution_result=Mock(
+                        execution_result=ExecutionResult(
                             exit_code=0,
                             stdout="Success!",
                             stderr="",
                             duration=0.3,
-                            success=True,
                         ),
-                        comparison=Mock(
+                        comparison=ErrorComparison(
                             is_same_error=False,
                             similarity_score=0.0,
+                            key_differences=[],
                         ),
+                        custom_criteria_passed=None,
                     ),
                 ]
                 mock_verify.side_effect = verify_results
@@ -196,24 +195,23 @@ class TestConfigLoadingAndHealing:
         # Mock successful healing
         with patch("lazarus.core.runner.ScriptRunner.run_script") as mock_run:
             with patch("lazarus.core.runner.ScriptRunner.verify_fix") as mock_verify:
-                mock_run.return_value = Mock(
+                mock_run.return_value = ExecutionResult(
                     exit_code=1,
                     stdout="",
                     stderr="Error",
                     duration=0.5,
-                    success=False,
                 )
 
-                mock_verify.return_value = Mock(
+                mock_verify.return_value = VerificationResult(
                     status="success",
-                    execution_result=Mock(
+                    execution_result=ExecutionResult(
                         exit_code=0,
                         stdout="Success",
                         stderr="",
                         duration=0.3,
-                        success=True,
                     ),
-                    comparison=Mock(is_same_error=False),
+                    comparison=ErrorComparison(is_same_error=False, similarity_score=0.0, key_differences=[]),
+                    custom_criteria_passed=None,
                 )
 
                 healer = Healer(config)

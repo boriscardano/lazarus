@@ -8,7 +8,6 @@ and healing.
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Optional
 
 from lazarus.core.context import (
     CommitInfo,
@@ -193,9 +192,9 @@ def truncate_commit(commit: CommitInfo, max_tokens: int) -> CommitInfo:
 
 
 def truncate_git_context(
-    git_context: Optional[GitContext],
+    git_context: GitContext | None,
     max_tokens: int,
-) -> Optional[GitContext]:
+) -> GitContext | None:
     """Truncate git context to fit within token limit.
 
     Prioritizes recent commits over older ones, and uncommitted changes

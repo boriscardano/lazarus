@@ -179,7 +179,7 @@ notifications:
   # GitHub Issues - create issues for failures
   github_issues:
     # Repository in format 'owner/repo'
-    repo: yourusername/your-repo
+    repo: boriscardano/lazarus
 
     # Labels to apply to created issues
     labels:

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from lazarus.claude.prompts import build_healing_prompt, build_retry_prompt
-from lazarus.config.schema import HealingConfig, LazarusConfig, ScriptConfig
+from lazarus.config.schema import LazarusConfig, ScriptConfig
 from lazarus.core.context import (
     CommitInfo,
     ExecutionResult,
@@ -26,7 +26,7 @@ def test_build_healing_prompt_basic():
             stdout="",
             stderr="SyntaxError: invalid syntax",
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(
@@ -66,7 +66,7 @@ def test_build_healing_prompt_with_git_context():
             stdout="",
             stderr="Error",
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=GitContext(
             branch="main",
@@ -120,7 +120,7 @@ def test_build_healing_prompt_with_custom_config():
             stdout="",
             stderr="Error",
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(
@@ -155,7 +155,7 @@ def test_build_healing_prompt_truncates_long_output():
             stdout="",
             stderr=long_stderr,
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(
@@ -186,7 +186,7 @@ def test_build_retry_prompt():
             stdout="",
             stderr="Error",
             duration=0.1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         ),
         git_context=None,
         system_context=SystemContext(

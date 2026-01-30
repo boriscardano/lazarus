@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import os
 import subprocess
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 import pytest
 
 from lazarus.config.schema import LazarusConfig, ScriptConfig
 from lazarus.core.context import ExecutionResult
 from lazarus.core.runner import ScriptRunner
-from lazarus.core.verification import ErrorComparison, VerificationResult
+from lazarus.core.verification import ErrorComparison
 
 
 class TestScriptRunnerInit:

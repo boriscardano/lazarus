@@ -10,10 +10,9 @@ from __future__ import annotations
 import logging
 import subprocess
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from lazarus.claude.client import ClaudeCodeClient
 from lazarus.claude.parser import ClaudeResponse
@@ -27,8 +26,9 @@ from lazarus.core.context import (
 from lazarus.core.loop import HealingLoop
 from lazarus.core.runner import ScriptRunner
 from lazarus.core.verification import VerificationResult
-from lazarus.git.operations import GitOperations, GitOperationError
+from lazarus.git.operations import GitOperationError, GitOperations
 from lazarus.git.pr import PRCreator
+from lazarus.security.redactor import redact_context
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,9 @@ class HealingResult:
     success: bool
     attempts: list[HealingAttempt]
     final_execution: ExecutionResult
-    pr_url: Optional[str] = None
+    pr_url: str | None = None
     duration: float = 0.0
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class Healer:
@@ -87,7 +87,7 @@ class Healer:
         loop: Healing loop manager for retry logic
     """
 
-    def __init__(self, config: LazarusConfig, repo_path: Optional[Path] = None) -> None:
+    def __init__(self, config: LazarusConfig, repo_path: Path | None = None) -> None:
         """Initialize the healer.
 
         Args:
@@ -103,7 +103,7 @@ class Healer:
         )
 
         # Initialize git operations if in a git repo
-        self.git_ops: Optional[GitOperations] = None
+        self.git_ops: GitOperations | None = None
         if repo_path:
             try:
                 self.git_ops = GitOperations(repo_path)
@@ -142,9 +142,9 @@ class Healer:
             raise FileNotFoundError(f"Script not found: {script_path}")
 
         # Git workflow state tracking
-        original_branch: Optional[str] = None
+        original_branch: str | None = None
         stashed_changes = False
-        feature_branch: Optional[str] = None
+        feature_branch: str | None = None
 
         try:
             # === GIT SETUP PHASE ===
@@ -209,6 +209,9 @@ class Healer:
                 result=initial_result,
                 config=self.config,
             )
+
+            # SECURITY: Redact secrets before sending to Claude
+            context = redact_context(context)
 
             # Initialize Claude Code client
             working_dir = (
@@ -307,7 +310,8 @@ class Healer:
                     new_context.previous_attempts = context.previous_attempts + [
                         previous_attempt
                     ]
-                    context = new_context
+                    # SECURITY: Redact secrets in new context
+                    context = redact_context(new_context)
                 elif verification.status == "timeout":
                     context = self._enhance_context_for_retry(
                         context=context,
@@ -369,7 +373,7 @@ class Healer:
     def _run_script(
         self,
         script_path: Path,
-        config: Optional[ScriptConfig],
+        config: ScriptConfig | None,
     ) -> ExecutionResult:
         """Run a script with appropriate configuration.
 
@@ -389,7 +393,7 @@ class Healer:
             timeout=timeout,
         )
 
-    def _find_script_config(self, script_path: Path) -> Optional[ScriptConfig]:
+    def _find_script_config(self, script_path: Path) -> ScriptConfig | None:
         """Find script configuration for a given script path.
 
         Args:
@@ -474,24 +478,26 @@ class Healer:
         # Add all previous attempts (including this one)
         new_context.previous_attempts = context.previous_attempts + [previous_attempt]
 
-        return new_context
+        # SECURITY: Redact secrets in new context
+        return redact_context(new_context)
 
     def _finalize_healing(
         self,
         result: HealingResult,
         script_path: Path,
-        original_branch: Optional[str],
+        original_branch: str | None,
         stashed_changes: bool,
-        feature_branch: Optional[str],
+        feature_branch: str | None,
         has_changes: bool,
     ) -> HealingResult:
-        """Finalize the healing process with git operations.
+        """Finalize the healing process with git operations and notifications.
 
         This handles:
         - Pushing changes to remote (if any were made)
         - Creating a PR (if healing was successful and config enabled)
         - Returning to original branch
         - Restoring stashed changes
+        - Sending notifications
 
         Args:
             result: The healing result
@@ -504,88 +510,102 @@ class Healer:
         Returns:
             Updated HealingResult with PR URL if applicable
         """
-        if not self.git_ops:
-            # Not in a git repo - just return result as-is
-            return result
+        # Handle git operations if in a git repo
+        if self.git_ops:
+            try:
+                # Step 1: Push branch to remote if changes were made
+                if has_changes and feature_branch and self._has_remote():
+                    try:
+                        logger.info("Pushing branch %s to remote", feature_branch)
+                        self.git_ops.push(
+                            remote="origin",
+                            branch=feature_branch,
+                            set_upstream=True,
+                        )
+                        logger.info("Branch pushed successfully")
+                    except GitOperationError as e:
+                        logger.warning("Failed to push branch: %s", e)
+                        # Continue - we'll note this in the result
 
-        try:
-            # Step 1: Push branch to remote if changes were made
-            if has_changes and feature_branch and self._has_remote():
-                try:
-                    logger.info("Pushing branch %s to remote", feature_branch)
-                    self.git_ops.push(
-                        remote="origin",
-                        branch=feature_branch,
-                        set_upstream=True,
-                    )
-                    logger.info("Branch pushed successfully")
-                except GitOperationError as e:
-                    logger.warning("Failed to push branch: %s", e)
-                    # Continue - we'll note this in the result
+                # Step 2: Create PR if healing was successful and config enabled
+                if result.success and has_changes and self.config.git.create_pr:
+                    try:
+                        logger.info("Creating pull request")
+                        pr_creator = PRCreator(
+                            config=self.config.git,
+                            repo_path=self.git_ops.repo_path,
+                        )
+                        pr_result = pr_creator.create_pr(
+                            healing_result=result,
+                            script_path=script_path,
+                        )
 
-            # Step 2: Create PR if healing was successful and config enabled
-            if result.success and has_changes and self.config.git.create_pr:
-                try:
-                    logger.info("Creating pull request")
-                    pr_creator = PRCreator(
-                        config=self.config.git,
-                        repo_path=self.git_ops.repo_path,
-                    )
-                    pr_result = pr_creator.create_pr(
-                        healing_result=result,
-                        script_path=script_path,
-                    )
+                        if pr_result.success and pr_result.pr_url:
+                            result.pr_url = pr_result.pr_url
+                            logger.info("PR created: %s", pr_result.pr_url)
+                        else:
+                            logger.warning("Failed to create PR: %s", pr_result.error_message)
+                    except Exception as e:
+                        logger.error("Error creating PR: %s", e, exc_info=True)
+                        # Don't fail the healing process if PR creation fails
 
-                    if pr_result.success and pr_result.pr_url:
-                        result.pr_url = pr_result.pr_url
-                        logger.info("PR created: %s", pr_result.pr_url)
-                    else:
-                        logger.warning("Failed to create PR: %s", pr_result.error_message)
-                except Exception as e:
-                    logger.error("Error creating PR: %s", e, exc_info=True)
-                    # Don't fail the healing process if PR creation fails
+                # Step 3: Push branch even if healing failed (for debugging)
+                elif not result.success and has_changes and feature_branch and self._has_remote():
+                    try:
+                        logger.info("Pushing failed healing attempt for debugging")
+                        self.git_ops.push(
+                            remote="origin",
+                            branch=feature_branch,
+                            set_upstream=True,
+                        )
+                        logger.info("Failed healing branch pushed for manual review")
+                    except GitOperationError as e:
+                        logger.warning("Failed to push debugging branch: %s", e)
 
-            # Step 3: Push branch even if healing failed (for debugging)
-            elif not result.success and has_changes and feature_branch and self._has_remote():
-                try:
-                    logger.info("Pushing failed healing attempt for debugging")
-                    self.git_ops.push(
-                        remote="origin",
-                        branch=feature_branch,
-                        set_upstream=True,
-                    )
-                    logger.info("Failed healing branch pushed for manual review")
-                except GitOperationError as e:
-                    logger.warning("Failed to push debugging branch: %s", e)
+            finally:
+                # Step 4: Always return to original branch
+                if original_branch:
+                    try:
+                        logger.info("Returning to original branch: %s", original_branch)
+                        self.git_ops.checkout_branch(original_branch)
+                        logger.info("Checked out original branch")
+                    except GitOperationError as e:
+                        logger.error("Failed to return to original branch: %s", e)
+                        # This is a serious problem - warn the user
+                        if not result.error_message:
+                            result.error_message = f"Failed to return to original branch: {e}"
+                        else:
+                            result.error_message += f"\nWarning: Failed to return to original branch: {e}"
 
-        finally:
-            # Step 4: Always return to original branch
-            if original_branch:
-                try:
-                    logger.info("Returning to original branch: %s", original_branch)
-                    self.git_ops.checkout_branch(original_branch)
-                    logger.info("Checked out original branch")
-                except GitOperationError as e:
-                    logger.error("Failed to return to original branch: %s", e)
-                    # This is a serious problem - warn the user
-                    if not result.error_message:
-                        result.error_message = f"Failed to return to original branch: {e}"
-                    else:
-                        result.error_message += f"\nWarning: Failed to return to original branch: {e}"
+                # Step 5: Always restore stashed changes
+                if stashed_changes:
+                    try:
+                        logger.info("Restoring stashed changes")
+                        self.git_ops.pop_stash()
+                        logger.info("Stashed changes restored")
+                    except GitOperationError as e:
+                        logger.error("Failed to restore stashed changes: %s", e)
+                        warning = "Failed to restore stashed changes - use 'git stash pop' manually"
+                        if not result.error_message:
+                            result.error_message = warning
+                        else:
+                            result.error_message += f"\nWarning: {warning}"
 
-            # Step 5: Always restore stashed changes
-            if stashed_changes:
-                try:
-                    logger.info("Restoring stashed changes")
-                    self.git_ops.pop_stash()
-                    logger.info("Stashed changes restored")
-                except GitOperationError as e:
-                    logger.error("Failed to restore stashed changes: %s", e)
-                    warning = "Failed to restore stashed changes - use 'git stash pop' manually"
-                    if not result.error_message:
-                        result.error_message = warning
-                    else:
-                        result.error_message += f"\nWarning: {warning}"
+        # Send notifications if configured
+        if self.config.notifications:
+            try:
+                # Lazy import to avoid circular dependency
+                from lazarus.notifications import NotificationDispatcher
+
+                dispatcher = NotificationDispatcher(self.config.notifications)
+                dispatcher.dispatch(
+                    result=result,
+                    script_path=script_path,
+                )
+                logger.info("Notifications dispatched")
+            except Exception as e:
+                # Log but don't fail healing due to notification errors
+                logger.warning("Failed to send notifications: %s", e)
 
         return result
 
@@ -604,7 +624,7 @@ class Healer:
         script_name = script_path.stem.replace("_", "-").replace(".", "-").lower()
 
         # Add timestamp for uniqueness
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
         # Combine with prefix from config
         prefix = self.config.git.branch_prefix

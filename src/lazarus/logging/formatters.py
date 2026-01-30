@@ -7,7 +7,6 @@ in the CLI with rich formatting and JSON output.
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -103,7 +102,7 @@ def format_healing_json(result: HealingResult) -> str:
 
 def display_healing_result_table(
     result: HealingResult,
-    console: Optional[Console] = None,
+    console: Console | None = None,
 ) -> None:
     """Display healing result as a rich table.
 
