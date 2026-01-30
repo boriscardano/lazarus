@@ -330,7 +330,7 @@ display_changelog() {
         echo ""
     else
         print_info "View full changelog at:"
-        echo -e "${BLUE}https://github.com/yourusername/lazarus/blob/main/CHANGELOG.md${NC}"
+        echo -e "${BLUE}https://github.com/boriscardano/lazarus/blob/main/CHANGELOG.md${NC}"
         echo ""
     fi
 }
@@ -382,7 +382,7 @@ EOF
         echo ""
     fi
 
-    echo -e "Documentation: ${BLUE}https://github.com/yourusername/lazarus#readme${NC}"
+    echo -e "Documentation: ${BLUE}https://github.com/boriscardano/lazarus#readme${NC}"
     echo ""
 }
 

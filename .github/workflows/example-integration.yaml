@@ -168,7 +168,7 @@ jobs:
             }
 
             body += '\n\n---\n';
-            body += '*Powered by [Lazarus](https://github.com/yourusername/lazarus) - Self-healing CI/CD*';
+            body += '*Powered by [Lazarus](https://github.com/boriscardano/lazarus) - Self-healing CI/CD*';
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

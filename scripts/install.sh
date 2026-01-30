@@ -321,8 +321,8 @@ EOF
         echo ""
     fi
 
-    echo -e "Documentation: ${BLUE}https://github.com/yourusername/lazarus#readme${NC}"
-    echo -e "Report issues: ${BLUE}https://github.com/yourusername/lazarus/issues${NC}"
+    echo -e "Documentation: ${BLUE}https://github.com/boriscardano/lazarus#readme${NC}"
+    echo -e "Report issues: ${BLUE}https://github.com/boriscardano/lazarus/issues${NC}"
     echo ""
 }
 
