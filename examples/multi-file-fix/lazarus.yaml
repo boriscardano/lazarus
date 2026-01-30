@@ -1,0 +1,33 @@
+version: "1"
+
+scripts:
+  - name: "sales-report"
+    path: "./main.py"
+    description: "Generate daily sales report with statistics"
+    schedule: "0 9 * * *"  # Run at 9 AM daily
+
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 150
+  total_timeout: 400
+  allowed_files:
+    - "main.py"
+    - "utils/helpers.py"
+    - "utils/__init__.py"
+  # Allow modifications to multiple files for comprehensive fixes
+
+notifications:
+  # Example: Notify when fixes span multiple files
+  # slack:
+  #   webhook_url: "${SLACK_WEBHOOK_URL}"
+  #   on_success: true
+  #   on_failure: true
+  # email:
+  #   to: "dev-team@example.com"
+  #   on_success: true
+
+git:
+  create_pr: true
+  branch_prefix: "lazarus/fix"
+  draft_pr: false
+  # PR will show all files that were modified

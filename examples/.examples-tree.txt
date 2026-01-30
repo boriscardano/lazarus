@@ -1,0 +1,45 @@
+examples/
+├── README.md                          # Comprehensive guide to all examples
+├── QUICKSTART.md                      # 5-minute quick start guide
+├── EXAMPLES_SUMMARY.md                # Technical reference and summary
+├── lazarus-example.yaml               # Template configuration file
+│
+├── python-syntax-error/               # Example 1: Python Syntax Error
+│   ├── script.py                      # Sales data processor (MISSING COLON on line 12)
+│   ├── lazarus.yaml                   # Configuration: 3 attempts, 120s timeout
+│   └── README.md                      # Bug: Missing : in function definition
+│
+├── shell-typo/                        # Example 2: Shell Script Typo
+│   ├── backup.sh                      # Backup script (TYPOS: echoo, mkdri)
+│   ├── lazarus.yaml                   # Configuration: Scheduled 2 AM daily
+│   └── README.md                      # Bug: Command typos causing "not found"
+│
+├── nodejs-runtime-error/              # Example 3: Node.js Runtime Error
+│   ├── app.js                         # User data processor (UNDEFINED FUNCTION)
+│   ├── package.json                   # Node.js package configuration
+│   ├── lazarus.yaml                   # Configuration: 3 attempts, 120s timeout
+│   └── README.md                      # Bug: getUserById function not defined
+│
+├── api-change-simulation/             # Example 4: API Change Simulation
+│   ├── api_module.py                  # Library with changed API (v2.0)
+│   ├── fetch_data.py                  # Script using old API signature
+│   ├── lazarus.yaml                   # Configuration: Only fetch_data.py allowed
+│   └── README.md                      # Bug: Missing new required parameter
+│
+├── multi-file-fix/                    # Example 5: Multi-File Fix
+│   ├── main.py                        # Sales report generator
+│   ├── utils/                         # Utility package
+│   │   ├── __init__.py                # Package initialization
+│   │   └── helpers.py                 # Helper functions (2 BUGS HERE)
+│   ├── lazarus.yaml                   # Configuration: Multiple files allowed
+│   └── README.md                      # Bugs: Division by zero + missing $ sign
+│
+└── unfixable-scenario/                # Example 6: Unfixable Scenario
+    ├── impossible.py                  # Script requiring external resources
+    ├── lazarus.yaml                   # Configuration: 2 attempts, no PR
+    └── README.md                      # Issues: Missing file, unreachable DB, no API key
+
+Total: 6 examples | 24 files | 8 READMEs
+Difficulty: 2 Easy + 2 Medium + 1 Hard + 1 Impossible
+Languages: Python, Shell, JavaScript
+Estimated completion time: 60 minutes

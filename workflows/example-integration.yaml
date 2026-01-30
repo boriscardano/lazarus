@@ -1,0 +1,363 @@
+name: Example CI Integration with Lazarus
+
+# This is an example workflow showing how to integrate Lazarus
+# into your existing CI/CD pipeline for automatic healing
+
+on:
+  # Trigger on push to main/master branches
+  push:
+    branches: [main, master]
+
+  # Trigger on pull requests
+  pull_request:
+    branches: [main, master]
+
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      force_failure:
+        description: 'Force script to fail for testing'
+        required: false
+        type: boolean
+        default: false
+
+# Minimal permissions by default
+permissions:
+  contents: read
+
+jobs:
+  # Example job that runs a critical script
+  run-critical-script:
+    name: Run Critical Script
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    outputs:
+      script_failed: ${{ steps.run_script.outcome == 'failure' }}
+      script_exit_code: ${{ steps.run_script.outputs.exit_code }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt found"
+
+      - name: Run critical script
+        id: run_script
+        continue-on-error: true  # Don't fail the workflow yet
+        run: |
+          set +e
+
+          # Example: Run your critical script
+          # Replace this with your actual script path
+          SCRIPT="./scripts/critical_job.py"
+
+          if [ ! -f "$SCRIPT" ]; then
+            echo "Script not found: $SCRIPT"
+            echo "Using example script for demonstration..."
+            SCRIPT="./examples/example_script.py"
+          fi
+
+          # Force failure if requested (for testing)
+          if [ "${{ github.event.inputs.force_failure }}" = "true" ]; then
+            echo "Forcing script to fail for testing..."
+            exit 1
+          fi
+
+          # Run the script
+          python "$SCRIPT"
+
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ Script failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          else
+            echo "✅ Script completed successfully"
+            exit 0
+          fi
+
+      - name: Upload script output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-output-${{ github.run_id }}
+          path: |
+            logs/
+            *.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Call the reusable healing workflow if the script fails
+  heal-on-failure:
+    name: Heal Failed Script
+    needs: run-critical-script
+    if: needs.run-critical-script.outputs.script_failed == 'true'
+    uses: ./.github/workflows/lazarus-on-failure.yaml
+    with:
+      script_path: './scripts/critical_job.py'  # Adjust to your script
+      max_attempts: 3
+      create_pr: true
+      timeout_minutes: 15
+      continue_on_error: false  # Fail the workflow if healing fails
+      runner: 'ubuntu-latest'   # Or 'self-hosted'
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  # Comment on PR with healing results
+  comment-on-pr:
+    name: Comment Healing Results
+    needs: [run-critical-script, heal-on-failure]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const scriptFailed = '${{ needs.run-critical-script.outputs.script_failed }}' === 'true';
+            const healingResult = '${{ needs.heal-on-failure.outputs.healing_result }}';
+            const healingPR = '${{ needs.heal-on-failure.outputs.pr_url }}';
+
+            let body = '## 🔧 Script Execution Report\n\n';
+
+            if (!scriptFailed) {
+              body += '✅ **All scripts executed successfully!**\n\n';
+              body += 'No healing was required.';
+            } else {
+              body += '⚠️ **Script failed but Lazarus attempted to heal it**\n\n';
+              body += `**Healing Result:** ${healingResult}\n\n`;
+
+              if (healingResult === 'success' && healingPR) {
+                body += `✅ Lazarus successfully healed the script!\n\n`;
+                body += `**Fix PR:** ${healingPR}\n\n`;
+                body += 'Please review the fix before merging this PR.\n\n';
+                body += '### Next Steps:\n';
+                body += `1. Review the [healing PR](${healingPR})\n`;
+                body += '2. Test the fix in your environment\n';
+                body += '3. Merge the healing PR first\n';
+                body += '4. Rebase this PR on the latest main branch\n';
+                body += '5. Re-run CI to verify the fix works\n';
+              } else if (healingResult === 'success') {
+                body += '✅ Lazarus successfully healed the script!\n\n';
+                body += 'Changes were made but no PR was created.\n';
+              } else {
+                body += '❌ Lazarus was unable to automatically heal the script.\n\n';
+                body += '### Next Steps:\n';
+                body += '1. Review the [healing logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n';
+                body += '2. Manual investigation may be required\n';
+                body += '3. Check if infrastructure or dependency changes are needed\n';
+              }
+            }
+
+            body += '\n\n---\n';
+            body += '*Powered by [Lazarus](https://github.com/yourusername/lazarus) - Self-healing CI/CD*';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+  # Optional: Run additional tests after successful healing
+  verify-healing:
+    name: Verify Healing
+    needs: [run-critical-script, heal-on-failure]
+    if: needs.heal-on-failure.outputs.healing_result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout healing PR
+        if: needs.heal-on-failure.outputs.pr_url != ''
+        uses: actions/checkout@v4
+        with:
+          # Checkout the healing PR branch to verify the fix
+          repository: ${{ github.repository }}
+          ref: ${{ needs.heal-on-failure.outputs.pr_url }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Re-run script with fix
+        run: |
+          echo "🔍 Verifying healing by re-running the script..."
+          python ./scripts/critical_job.py
+
+      - name: Run integration tests
+        run: |
+          echo "🧪 Running integration tests to verify fix..."
+          # Add your test commands here
+          # pytest tests/integration/
+          echo "Tests passed!"
+
+  # Optional: Notify team about healing results
+  notify:
+    name: Notify Team
+    needs: [run-critical-script, heal-on-failure]
+    if: always() && needs.run-critical-script.outputs.script_failed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Slack notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          RESULT="${{ needs.heal-on-failure.outputs.healing_result }}"
+          PR_URL="${{ needs.heal-on-failure.outputs.pr_url }}"
+
+          if [ "$RESULT" = "success" ]; then
+            COLOR="good"
+            ICON=":white_check_mark:"
+            TITLE="Lazarus Successfully Healed Failed Script"
+            MESSAGE="The script was automatically fixed!"
+          else
+            COLOR="danger"
+            ICON=":x:"
+            TITLE="Lazarus Could Not Heal Failed Script"
+            MESSAGE="Manual intervention may be required."
+          fi
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "attachments": [
+              {
+                "color": "$COLOR",
+                "title": "$ICON $TITLE",
+                "text": "$MESSAGE",
+                "fields": [
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Triggered by",
+                    "value": "${{ github.actor }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Workflow Run",
+                    "value": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>",
+                    "short": true
+                  }
+                ],
+                "footer": "Lazarus Healing System",
+                "ts": $(date +%s)
+              }
+            ]
+          }
+          EOF
+          )
+
+          if [ -n "$PR_URL" ]; then
+            # Add PR URL to payload if available
+            PAYLOAD=$(echo "$PAYLOAD" | jq --arg pr "$PR_URL" \
+              '.attachments[0].fields += [{"title": "Healing PR", "value": $pr, "short": false}]')
+          fi
+
+          curl -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"
+
+      - name: Create GitHub issue on healing failure
+        if: needs.heal-on-failure.outputs.healing_result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `🚨 Healing Failed: Script requires manual attention`;
+            const body = `
+            ## Critical Script Healing Failure
+
+            Lazarus was unable to automatically heal a failed script in the CI pipeline.
+
+            **Details:**
+            - **Workflow:** ${context.workflow}
+            - **Run:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - **Branch:** ${{ github.ref_name }}
+            - **Commit:** ${{ github.sha }}
+            - **Triggered by:** @${{ github.actor }}
+
+            **Script Information:**
+            - **Path:** \`./scripts/critical_job.py\`
+            - **Exit Code:** ${{ needs.run-critical-script.outputs.script_exit_code }}
+
+            ### Actions Required:
+            1. Review the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Download artifacts for detailed analysis
+            3. Investigate root cause of the failure
+            4. Apply manual fix if needed
+            5. Consider if infrastructure or dependency updates are required
+
+            ### Debugging Resources:
+            - [Healing logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [Original script output](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ---
+            *This issue was automatically created by the Lazarus CI integration.*
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['critical', 'lazarus', 'healing-failed', 'ci-failure'],
+              assignees: [context.actor]
+            });
+
+  # Final status check
+  final-status:
+    name: Final Status
+    needs: [run-critical-script, heal-on-failure]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check overall status
+        run: |
+          SCRIPT_FAILED="${{ needs.run-critical-script.outputs.script_failed }}"
+          HEALING_RESULT="${{ needs.heal-on-failure.outputs.healing_result }}"
+
+          echo "📊 Final Status Report"
+          echo "====================="
+          echo "Script Failed: $SCRIPT_FAILED"
+          echo "Healing Result: $HEALING_RESULT"
+          echo ""
+
+          if [ "$SCRIPT_FAILED" = "false" ]; then
+            echo "✅ Pipeline succeeded - no issues detected"
+            exit 0
+          elif [ "$HEALING_RESULT" = "success" ]; then
+            echo "✅ Pipeline succeeded - issues were automatically healed"
+            exit 0
+          else
+            echo "❌ Pipeline failed - manual intervention required"
+            exit 1
+          fi

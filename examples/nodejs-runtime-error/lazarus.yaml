@@ -1,0 +1,24 @@
+version: "1"
+
+scripts:
+  - name: "user-report"
+    path: "./app.js"
+    description: "Generate user statistics report"
+
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 120
+  total_timeout: 300
+  allowed_files:
+    - "app.js"
+
+notifications:
+  # Example: Enable GitHub issue creation
+  # github:
+  #   create_issue: true
+  #   on_failure: true
+
+git:
+  create_pr: true
+  branch_prefix: "lazarus/fix"
+  draft_pr: false

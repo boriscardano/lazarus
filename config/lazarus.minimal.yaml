@@ -1,0 +1,25 @@
+# Minimal Lazarus Configuration
+# This is a minimal example showing only the required configuration options.
+
+# Scripts to monitor and heal
+scripts:
+  - name: backup-script
+    path: scripts/backup.sh
+    description: Daily database backup script
+
+# Healing configuration (optional, defaults shown)
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 300  # 5 minutes
+  total_timeout: 900  # 15 minutes
+
+# Git configuration (optional, defaults shown)
+git:
+  create_pr: true
+  branch_prefix: lazarus/fix
+  draft_pr: false
+
+# Logging configuration (optional, defaults shown)
+logging:
+  level: INFO
+  console: true

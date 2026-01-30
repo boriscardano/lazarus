@@ -1,0 +1,711 @@
+{
+  "$defs": {
+    "DiscordConfig": {
+      "description": "Discord notification configuration.\n\nAttributes:\n    webhook_url: Discord webhook URL (supports ${ENV_VAR} expansion)\n    on_success: Send notifications on successful healing (default: True)\n    on_failure: Send notifications on healing failure (default: True)",
+      "properties": {
+        "webhook_url": {
+          "description": "Discord webhook URL",
+          "title": "Webhook Url",
+          "type": "string"
+        },
+        "on_success": {
+          "default": true,
+          "description": "Notify on success",
+          "title": "On Success",
+          "type": "boolean"
+        },
+        "on_failure": {
+          "default": true,
+          "description": "Notify on failure",
+          "title": "On Failure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "webhook_url"
+      ],
+      "title": "DiscordConfig",
+      "type": "object"
+    },
+    "EmailConfig": {
+      "description": "Email notification configuration.\n\nAttributes:\n    smtp_host: SMTP server hostname\n    smtp_port: SMTP server port (default: 587)\n    username: SMTP username (supports ${ENV_VAR} expansion)\n    password: SMTP password (supports ${ENV_VAR} expansion)\n    from_addr: Sender email address\n    to_addrs: List of recipient email addresses\n    on_success: Send notifications on successful healing (default: True)\n    on_failure: Send notifications on healing failure (default: True)\n    use_tls: Use TLS encryption (default: True)",
+      "properties": {
+        "smtp_host": {
+          "description": "SMTP server hostname",
+          "title": "Smtp Host",
+          "type": "string"
+        },
+        "smtp_port": {
+          "default": 587,
+          "description": "SMTP port",
+          "maximum": 65535,
+          "minimum": 1,
+          "title": "Smtp Port",
+          "type": "integer"
+        },
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SMTP username (supports ${ENV_VAR})",
+          "title": "Username"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SMTP password (supports ${ENV_VAR})",
+          "title": "Password"
+        },
+        "from_addr": {
+          "description": "Sender email address",
+          "title": "From Addr",
+          "type": "string"
+        },
+        "to_addrs": {
+          "description": "Recipient email addresses",
+          "items": {
+            "type": "string"
+          },
+          "title": "To Addrs",
+          "type": "array"
+        },
+        "on_success": {
+          "default": true,
+          "description": "Notify on success",
+          "title": "On Success",
+          "type": "boolean"
+        },
+        "on_failure": {
+          "default": true,
+          "description": "Notify on failure",
+          "title": "On Failure",
+          "type": "boolean"
+        },
+        "use_tls": {
+          "default": true,
+          "description": "Use TLS encryption",
+          "title": "Use Tls",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "smtp_host",
+        "from_addr",
+        "to_addrs"
+      ],
+      "title": "EmailConfig",
+      "type": "object"
+    },
+    "GitConfig": {
+      "description": "Git and pull request configuration.\n\nAttributes:\n    create_pr: Whether to create PRs automatically (default: True)\n    branch_prefix: Prefix for healing branches (default: 'lazarus/fix')\n    draft_pr: Create PRs as drafts (default: False)\n    auto_merge: Enable auto-merge if checks pass (default: False)\n    commit_message_template: Template for commit messages\n    pr_title_template: Template for PR titles\n    pr_body_template: Template for PR bodies",
+      "properties": {
+        "create_pr": {
+          "default": true,
+          "description": "Create pull requests automatically",
+          "title": "Create Pr",
+          "type": "boolean"
+        },
+        "branch_prefix": {
+          "default": "lazarus/fix",
+          "description": "Prefix for healing branches",
+          "title": "Branch Prefix",
+          "type": "string"
+        },
+        "draft_pr": {
+          "default": false,
+          "description": "Create PRs as drafts",
+          "title": "Draft Pr",
+          "type": "boolean"
+        },
+        "auto_merge": {
+          "default": false,
+          "description": "Enable auto-merge if checks pass",
+          "title": "Auto Merge",
+          "type": "boolean"
+        },
+        "commit_message_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Template for commit messages",
+          "title": "Commit Message Template"
+        },
+        "pr_title_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Template for PR titles",
+          "title": "Pr Title Template"
+        },
+        "pr_body_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Template for PR bodies",
+          "title": "Pr Body Template"
+        }
+      },
+      "title": "GitConfig",
+      "type": "object"
+    },
+    "GitHubIssuesConfig": {
+      "description": "GitHub Issues notification configuration.\n\nAttributes:\n    repo: Repository in format 'owner/repo'\n    labels: Labels to apply to created issues\n    on_failure: Create issues on healing failure (default: True)\n    assignees: Optional list of users to assign issues to",
+      "properties": {
+        "repo": {
+          "description": "Repository in format 'owner/repo'",
+          "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
+          "title": "Repo",
+          "type": "string"
+        },
+        "labels": {
+          "description": "Labels for issues",
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        },
+        "on_failure": {
+          "default": true,
+          "description": "Create issues on failure",
+          "title": "On Failure",
+          "type": "boolean"
+        },
+        "assignees": {
+          "description": "Users to assign issues to",
+          "items": {
+            "type": "string"
+          },
+          "title": "Assignees",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repo"
+      ],
+      "title": "GitHubIssuesConfig",
+      "type": "object"
+    },
+    "HealingConfig": {
+      "description": "Configuration for the healing process.\n\nAttributes:\n    max_attempts: Maximum number of healing attempts (default: 3)\n    timeout_per_attempt: Maximum time for each attempt in seconds (default: 300)\n    total_timeout: Maximum total time for all attempts in seconds (default: 900)\n    claude_model: Claude model to use (default: claude-sonnet-4-5-20250929)\n    max_turns: Maximum conversation turns per healing session (default: 30)\n    allowed_tools: Specific tools Claude Code can use (empty = all)\n    forbidden_tools: Tools Claude Code cannot use",
+      "properties": {
+        "max_attempts": {
+          "default": 3,
+          "description": "Maximum healing attempts",
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Attempts",
+          "type": "integer"
+        },
+        "timeout_per_attempt": {
+          "default": 300,
+          "description": "Timeout per attempt in seconds",
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Timeout Per Attempt",
+          "type": "integer"
+        },
+        "total_timeout": {
+          "default": 900,
+          "description": "Total timeout in seconds",
+          "maximum": 7200,
+          "minimum": 60,
+          "title": "Total Timeout",
+          "type": "integer"
+        },
+        "claude_model": {
+          "default": "claude-sonnet-4-5-20250929",
+          "description": "Claude model to use for healing",
+          "title": "Claude Model",
+          "type": "string"
+        },
+        "max_turns": {
+          "default": 30,
+          "description": "Maximum conversation turns",
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Turns",
+          "type": "integer"
+        },
+        "allowed_tools": {
+          "description": "Specific tools Claude Code can use (empty = all)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Tools",
+          "type": "array"
+        },
+        "forbidden_tools": {
+          "description": "Tools Claude Code cannot use",
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Tools",
+          "type": "array"
+        }
+      },
+      "title": "HealingConfig",
+      "type": "object"
+    },
+    "LoggingConfig": {
+      "description": "Logging configuration.\n\nAttributes:\n    level: Log level (default: INFO)\n    format: Log format string\n    file: Optional log file path\n    rotation: Log rotation size in MB (0 = no rotation)\n    retention: Number of rotated logs to keep (default: 10)\n    console: Log to console (default: True)",
+      "properties": {
+        "level": {
+          "default": "INFO",
+          "description": "Log level",
+          "pattern": "^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$",
+          "title": "Level",
+          "type": "string"
+        },
+        "format": {
+          "default": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+          "description": "Log format string",
+          "title": "Format",
+          "type": "string"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Log file path",
+          "title": "File"
+        },
+        "rotation": {
+          "default": 10,
+          "description": "Log rotation size in MB",
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Rotation",
+          "type": "integer"
+        },
+        "retention": {
+          "default": 10,
+          "description": "Number of rotated logs to keep",
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Retention",
+          "type": "integer"
+        },
+        "console": {
+          "default": true,
+          "description": "Log to console",
+          "title": "Console",
+          "type": "boolean"
+        }
+      },
+      "title": "LoggingConfig",
+      "type": "object"
+    },
+    "NotificationConfig": {
+      "description": "Notification configuration for various channels.\n\nAttributes:\n    slack: Optional Slack notification configuration\n    discord: Optional Discord notification configuration\n    email: Optional email notification configuration\n    github_issues: Optional GitHub Issues notification configuration\n    webhook: Optional custom webhook notification configuration",
+      "properties": {
+        "slack": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlackConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Slack notifications"
+        },
+        "discord": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DiscordConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Discord notifications"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmailConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Email notifications"
+        },
+        "github_issues": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GitHubIssuesConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "GitHub Issues notifications"
+        },
+        "webhook": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WebhookConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom webhook notifications"
+        }
+      },
+      "title": "NotificationConfig",
+      "type": "object"
+    },
+    "ScriptConfig": {
+      "description": "Configuration for an individual script to monitor and heal.\n\nAttributes:\n    name: Human-readable name for the script\n    path: Path to the script file relative to repository root\n    description: Optional description of what the script does\n    schedule: Optional cron schedule expression for scheduled runs\n    timeout: Maximum execution time in seconds (default: 300)\n    working_dir: Optional working directory for script execution\n    allowed_files: Files that Claude Code is allowed to modify\n    forbidden_files: Files that Claude Code must never modify\n    environment: Required environment variable names (values from system)\n    setup_commands: Commands to run before executing the script\n    custom_prompt: Additional context to provide to Claude Code\n    idempotent: Whether the script is safe to re-run (default: True)\n    success_criteria: Custom success validation beyond exit code",
+      "properties": {
+        "name": {
+          "description": "Human-readable name for the script",
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path to the script file",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Description of what the script does",
+          "title": "Description"
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cron schedule expression (e.g., '0 */6 * * *')",
+          "title": "Schedule"
+        },
+        "timeout": {
+          "default": 300,
+          "description": "Execution timeout in seconds",
+          "maximum": 86400,
+          "minimum": 1,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "working_dir": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Working directory for script execution",
+          "title": "Working Dir"
+        },
+        "allowed_files": {
+          "description": "Glob patterns for files Claude Code can modify",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Files",
+          "type": "array"
+        },
+        "forbidden_files": {
+          "description": "Glob patterns for files Claude Code must not modify",
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Files",
+          "type": "array"
+        },
+        "environment": {
+          "description": "Required environment variable names",
+          "items": {
+            "type": "string"
+          },
+          "title": "Environment",
+          "type": "array"
+        },
+        "setup_commands": {
+          "description": "Commands to run before script execution",
+          "items": {
+            "type": "string"
+          },
+          "title": "Setup Commands",
+          "type": "array"
+        },
+        "custom_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional context for Claude Code",
+          "title": "Custom Prompt"
+        },
+        "idempotent": {
+          "default": true,
+          "description": "Whether the script is safe to re-run",
+          "title": "Idempotent",
+          "type": "boolean"
+        },
+        "success_criteria": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom success validation (e.g., {'contains': 'Success'})",
+          "title": "Success Criteria"
+        }
+      },
+      "required": [
+        "name",
+        "path"
+      ],
+      "title": "ScriptConfig",
+      "type": "object"
+    },
+    "SecurityConfig": {
+      "description": "Security and secrets redaction configuration.\n\nAttributes:\n    redact_patterns: Built-in regex patterns for secret detection\n    additional_patterns: User-defined regex patterns for secret detection\n    safe_env_vars: Environment variables that are safe to expose",
+      "properties": {
+        "redact_patterns": {
+          "description": "Built-in regex patterns for secret detection",
+          "items": {
+            "type": "string"
+          },
+          "title": "Redact Patterns",
+          "type": "array"
+        },
+        "additional_patterns": {
+          "description": "User-defined regex patterns",
+          "items": {
+            "type": "string"
+          },
+          "title": "Additional Patterns",
+          "type": "array"
+        },
+        "safe_env_vars": {
+          "description": "Environment variables safe to expose",
+          "items": {
+            "type": "string"
+          },
+          "title": "Safe Env Vars",
+          "type": "array"
+        }
+      },
+      "title": "SecurityConfig",
+      "type": "object"
+    },
+    "SlackConfig": {
+      "description": "Slack notification configuration.\n\nAttributes:\n    webhook_url: Slack webhook URL (supports ${ENV_VAR} expansion)\n    channel: Optional channel override\n    on_success: Send notifications on successful healing (default: True)\n    on_failure: Send notifications on healing failure (default: True)",
+      "properties": {
+        "webhook_url": {
+          "description": "Slack webhook URL",
+          "title": "Webhook Url",
+          "type": "string"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Channel override",
+          "title": "Channel"
+        },
+        "on_success": {
+          "default": true,
+          "description": "Notify on success",
+          "title": "On Success",
+          "type": "boolean"
+        },
+        "on_failure": {
+          "default": true,
+          "description": "Notify on failure",
+          "title": "On Failure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "webhook_url"
+      ],
+      "title": "SlackConfig",
+      "type": "object"
+    },
+    "WebhookConfig": {
+      "description": "Custom webhook notification configuration.\n\nAttributes:\n    url: Webhook URL (supports ${ENV_VAR} expansion)\n    headers: Optional HTTP headers to send\n    on_success: Send notifications on successful healing (default: True)\n    on_failure: Send notifications on healing failure (default: True)\n    method: HTTP method to use (default: POST)",
+      "properties": {
+        "url": {
+          "description": "Webhook URL",
+          "title": "Url",
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "HTTP headers",
+          "title": "Headers",
+          "type": "object"
+        },
+        "on_success": {
+          "default": true,
+          "description": "Notify on success",
+          "title": "On Success",
+          "type": "boolean"
+        },
+        "on_failure": {
+          "default": true,
+          "description": "Notify on failure",
+          "title": "On Failure",
+          "type": "boolean"
+        },
+        "method": {
+          "default": "POST",
+          "description": "HTTP method",
+          "pattern": "^(GET|POST|PUT|PATCH)$",
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "WebhookConfig",
+      "type": "object"
+    }
+  },
+  "description": "Main Lazarus configuration.\n\nThis is the root configuration object that contains all settings for\nthe Lazarus self-healing system.\n\nAttributes:\n    scripts: List of scripts to monitor and heal\n    healing: Healing process configuration\n    notifications: Notification settings\n    git: Git and pull request configuration\n    security: Security and secrets redaction configuration\n    logging: Logging configuration",
+  "examples": [
+    {
+      "healing": {
+        "max_attempts": 3,
+        "timeout_per_attempt": 300,
+        "total_timeout": 900
+      },
+      "notifications": {
+        "slack": {
+          "on_failure": true,
+          "on_success": true,
+          "webhook_url": "${SLACK_WEBHOOK_URL}"
+        }
+      },
+      "scripts": [
+        {
+          "description": "Daily database backup",
+          "name": "daily-backup",
+          "path": "scripts/backup.sh",
+          "schedule": "0 2 * * *",
+          "timeout": 600
+        }
+      ]
+    }
+  ],
+  "properties": {
+    "scripts": {
+      "description": "Scripts to monitor and heal",
+      "items": {
+        "$ref": "#/$defs/ScriptConfig"
+      },
+      "title": "Scripts",
+      "type": "array"
+    },
+    "healing": {
+      "$ref": "#/$defs/HealingConfig",
+      "description": "Healing configuration"
+    },
+    "notifications": {
+      "$ref": "#/$defs/NotificationConfig",
+      "description": "Notification settings"
+    },
+    "git": {
+      "$ref": "#/$defs/GitConfig",
+      "description": "Git configuration"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityConfig",
+      "description": "Security configuration"
+    },
+    "logging": {
+      "$ref": "#/$defs/LoggingConfig",
+      "description": "Logging configuration"
+    }
+  },
+  "title": "LazarusConfig",
+  "type": "object"
+}

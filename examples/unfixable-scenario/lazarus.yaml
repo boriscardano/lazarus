@@ -1,0 +1,27 @@
+version: "1"
+
+scripts:
+  - name: "impossible-task"
+    path: "./impossible.py"
+    description: "Script with unfixable external dependencies"
+
+healing:
+  max_attempts: 2  # Limit attempts since this can't be fixed
+  timeout_per_attempt: 60
+  total_timeout: 120
+  allowed_files:
+    - "impossible.py"
+  # Note: Even with file access, Lazarus can't fix these issues
+
+notifications:
+  # Example: Always notify on failure for unfixable scenarios
+  # slack:
+  #   webhook_url: "${SLACK_WEBHOOK_URL}"
+  #   on_failure: true
+  #   message: |
+  #     Script failed with external dependency issues.
+  #     Manual intervention required.
+
+git:
+  create_pr: false  # Don't create PR for unfixable issues
+  # Manual investigation needed instead

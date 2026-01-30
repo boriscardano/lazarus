@@ -1,0 +1,218 @@
+name: Lazarus Scheduled Healing
+
+on:
+  schedule:
+    # Default: Run every 6 hours at 0 minutes past the hour
+    # Customize based on your needs (e.g., '0 */4 * * *' for every 4 hours)
+    - cron: '0 */6 * * *'
+
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: 'Path to script to heal (relative to repository root)'
+        required: false
+        default: ''
+        type: string
+      max_attempts:
+        description: 'Maximum healing attempts'
+        required: false
+        default: '3'
+        type: string
+      create_pr:
+        description: 'Create PR if healing succeeds'
+        required: false
+        default: true
+        type: boolean
+      config_file:
+        description: 'Path to lazarus.yaml config file'
+        required: false
+        default: 'lazarus.yaml'
+        type: string
+
+# Minimal permissions following security best practices
+permissions:
+  contents: read
+
+jobs:
+  scheduled-healing:
+    name: Run Scheduled Healing
+    runs-on: self-hosted
+
+    # Add permissions needed for this job
+    permissions:
+      contents: write      # To create branches and commits
+      pull-requests: write # To create PRs
+      issues: write        # To create issues on failure
+
+    # Timeout after 30 minutes to prevent hung jobs
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better context
+          token: ${{ secrets.GH_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'  # Cache pip dependencies for faster runs
+
+      - name: Install Lazarus
+        run: |
+          python -m pip install --upgrade pip
+          pip install lazarus-heal
+
+      - name: Verify prerequisites
+        run: |
+          echo "Checking Lazarus prerequisites..."
+          lazarus check || echo "Warning: Some prerequisites may be missing"
+
+      - name: Determine script to heal
+        id: determine_script
+        run: |
+          if [ -n "${{ github.event.inputs.script_path }}" ]; then
+            echo "script_path=${{ github.event.inputs.script_path }}" >> $GITHUB_OUTPUT
+            echo "Running manual healing for: ${{ github.event.inputs.script_path }}"
+          elif [ -f "${{ github.event.inputs.config_file }}" ]; then
+            echo "script_path=" >> $GITHUB_OUTPUT
+            echo "Running all scripts from config: ${{ github.event.inputs.config_file }}"
+          else
+            echo "script_path=" >> $GITHUB_OUTPUT
+            echo "No script or config specified, checking repository state"
+          fi
+
+      - name: Run Lazarus healing
+        id: healing
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          set +e  # Don't exit on error
+
+          # Build command based on inputs
+          CMD="lazarus"
+
+          if [ -n "${{ steps.determine_script.outputs.script_path }}" ]; then
+            CMD="$CMD heal ${{ steps.determine_script.outputs.script_path }}"
+          else
+            CMD="$CMD run --config ${{ github.event.inputs.config_file }}"
+          fi
+
+          # Add optional parameters
+          if [ -n "${{ github.event.inputs.max_attempts }}" ]; then
+            CMD="$CMD --max-attempts ${{ github.event.inputs.max_attempts }}"
+          fi
+
+          if [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
+            CMD="$CMD --create-pr"
+          fi
+
+          echo "Running: $CMD"
+          $CMD
+
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "✅ Healing completed successfully"
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Healing failed with exit code $EXIT_CODE"
+          fi
+
+          exit $EXIT_CODE
+
+      - name: Upload healing logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lazarus-logs-${{ github.run_id }}
+          path: |
+            .lazarus/logs/
+            .lazarus/history/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload healing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-report-${{ github.run_id }}
+          path: |
+            .lazarus/reports/*.json
+            .lazarus/reports/*.md
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Generate job summary
+        if: always()
+        run: |
+          echo "# Lazarus Scheduled Healing Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Result:** ${{ steps.healing.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ steps.determine_script.outputs.script_path }}" ]; then
+            echo "**Script:** \`${{ steps.determine_script.outputs.script_path }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Config:** \`${{ github.event.inputs.config_file }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "**Max Attempts:** ${{ github.event.inputs.max_attempts || '3' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Create PR:** ${{ github.event.inputs.create_pr || 'true' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add recent healing history if available
+          if [ -f ".lazarus/history/latest.json" ]; then
+            echo "## Latest Healing Details" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat .lazarus/history/latest.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create issue on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || github.token }}
+          script: |
+            const title = `🚨 Scheduled Healing Failed - Run #${{ github.run_number }}`;
+            const body = `
+            ## Scheduled Healing Failure
+
+            The scheduled Lazarus healing workflow has failed.
+
+            **Details:**
+            - **Workflow:** ${context.workflow}
+            - **Run ID:** ${{ github.run_id }}
+            - **Run Number:** ${{ github.run_number }}
+            - **Scheduled Time:** ${new Date().toISOString()}
+            - **Exit Code:** ${{ steps.healing.outputs.exit_code }}
+
+            **Actions Required:**
+            1. Review the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Check the uploaded artifacts for detailed healing logs
+            3. Investigate why the healing process failed
+            4. Consider manual intervention if needed
+
+            **Artifacts:**
+            - [Healing Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [Healing Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ---
+            *This issue was automatically created by the Lazarus scheduled healing workflow.*
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['lazarus', 'healing-failure', 'automated']
+            });

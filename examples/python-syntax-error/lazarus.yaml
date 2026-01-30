@@ -1,0 +1,25 @@
+version: "1"
+
+scripts:
+  - name: "sales-report"
+    path: "./script.py"
+    description: "Daily sales data processing and reporting"
+
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 120
+  total_timeout: 300
+  allowed_files:
+    - "script.py"
+
+notifications:
+  # Example: Enable notifications when you're ready
+  # slack:
+  #   webhook_url: "${SLACK_WEBHOOK_URL}"
+  #   on_failure: true
+  #   on_success: true
+
+git:
+  create_pr: true
+  branch_prefix: "lazarus/fix"
+  draft_pr: false

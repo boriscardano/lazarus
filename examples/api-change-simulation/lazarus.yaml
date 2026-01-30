@@ -1,0 +1,28 @@
+version: "1"
+
+scripts:
+  - name: "data-fetcher"
+    path: "./fetch_data.py"
+    description: "Fetch user data from API module"
+    schedule: "0 * * * *"  # Run hourly
+
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 120
+  total_timeout: 300
+  allowed_files:
+    - "fetch_data.py"
+    # Note: api_module.py is NOT in allowed_files
+    # Lazarus should fix the caller, not the library
+
+notifications:
+  # Example: Notify when API changes break scripts
+  # slack:
+  #   webhook_url: "${SLACK_WEBHOOK_URL}"
+  #   on_failure: true
+  #   channels: ["#alerts"]
+
+git:
+  create_pr: true
+  branch_prefix: "lazarus/api-fix"
+  draft_pr: false

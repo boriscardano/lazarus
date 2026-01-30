@@ -1,0 +1,12 @@
+{
+  "name": "user-data-processor",
+  "version": "1.0.0",
+  "description": "Simple user data processor with a runtime error",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": ["example", "lazarus"],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,405 @@
+name: Lazarus Manual Healing
+
+# Manual workflow for on-demand healing with full control
+on:
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: 'Path to script to heal (required)'
+        required: true
+        type: string
+      max_attempts:
+        description: 'Maximum healing attempts'
+        required: false
+        type: number
+        default: 3
+      create_pr:
+        description: 'Create pull request with the fix'
+        required: false
+        type: boolean
+        default: true
+      draft_pr:
+        description: 'Create PR as draft'
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Dry run mode (analyze only, no changes)'
+        required: false
+        type: boolean
+        default: false
+      timeout_minutes:
+        description: 'Timeout per healing attempt (minutes)'
+        required: false
+        type: number
+        default: 10
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: choice
+        options:
+          - '3.11'
+          - '3.12'
+          - '3.13'
+        default: '3.11'
+      runner_type:
+        description: 'Runner to use'
+        required: false
+        type: choice
+        options:
+          - 'self-hosted'
+          - 'ubuntu-latest'
+          - 'macos-latest'
+        default: 'self-hosted'
+      verbose:
+        description: 'Enable verbose logging'
+        required: false
+        type: boolean
+        default: true
+      notification_level:
+        description: 'Notification level'
+        required: false
+        type: choice
+        options:
+          - 'all'
+          - 'failures-only'
+          - 'none'
+        default: 'all'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    outputs:
+      is_valid: ${{ steps.validate.outputs.is_valid }}
+      error_message: ${{ steps.validate.outputs.error_message }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate inputs
+        id: validate
+        run: |
+          echo "Validating inputs..."
+
+          # Check if script path is provided and not empty
+          if [ -z "${{ github.event.inputs.script_path }}" ]; then
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "error_message=Script path is required" >> $GITHUB_OUTPUT
+            echo "❌ Script path is required"
+            exit 1
+          fi
+
+          # Check if script exists
+          if [ ! -f "${{ github.event.inputs.script_path }}" ]; then
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "error_message=Script not found: ${{ github.event.inputs.script_path }}" >> $GITHUB_OUTPUT
+            echo "❌ Script not found: ${{ github.event.inputs.script_path }}"
+            exit 1
+          fi
+
+          # Check if max_attempts is valid
+          if [ ${{ github.event.inputs.max_attempts }} -lt 1 ] || [ ${{ github.event.inputs.max_attempts }} -gt 10 ]; then
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+            echo "error_message=Max attempts must be between 1 and 10" >> $GITHUB_OUTPUT
+            echo "❌ Max attempts must be between 1 and 10"
+            exit 1
+          fi
+
+          echo "is_valid=true" >> $GITHUB_OUTPUT
+          echo "✅ All inputs are valid"
+
+  manual-healing:
+    name: Manual Healing
+    needs: validate-inputs
+    if: needs.validate-inputs.outputs.is_valid == 'true'
+    runs-on: ${{ github.event.inputs.runner_type }}
+    timeout-minutes: ${{ fromJSON(github.event.inputs.timeout_minutes) * fromJSON(github.event.inputs.max_attempts) + 5 }}
+
+    permissions:
+      contents: write       # To create branches and commits
+      pull-requests: write  # To create PRs
+      issues: write         # To create issues
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ github.event.inputs.python_version }}
+          cache: 'pip'
+
+      - name: Install Lazarus
+        run: |
+          python -m pip install --upgrade pip
+          pip install lazarus-heal
+
+      - name: Display configuration
+        run: |
+          echo "📋 Healing Configuration"
+          echo "========================"
+          echo "Script: ${{ github.event.inputs.script_path }}"
+          echo "Max Attempts: ${{ github.event.inputs.max_attempts }}"
+          echo "Create PR: ${{ github.event.inputs.create_pr }}"
+          echo "Draft PR: ${{ github.event.inputs.draft_pr }}"
+          echo "Dry Run: ${{ github.event.inputs.dry_run }}"
+          echo "Timeout: ${{ github.event.inputs.timeout_minutes }} minutes"
+          echo "Python: ${{ github.event.inputs.python_version }}"
+          echo "Runner: ${{ github.event.inputs.runner_type }}"
+          echo "Verbose: ${{ github.event.inputs.verbose }}"
+          echo "========================"
+
+      - name: Check prerequisites
+        run: |
+          echo "🔍 Checking prerequisites..."
+          lazarus check --verbose || true
+
+      - name: Run Lazarus healing
+        id: healing
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          set +e  # Don't exit on error
+
+          echo "🚀 Starting healing process..."
+          START_TIME=$(date +%s)
+
+          # Build command
+          CMD="lazarus heal ${{ github.event.inputs.script_path }}"
+          CMD="$CMD --max-attempts ${{ github.event.inputs.max_attempts }}"
+          CMD="$CMD --timeout ${{ github.event.inputs.timeout_minutes }}"
+
+          # Add flags based on inputs
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            CMD="$CMD --dry-run"
+            echo "🔍 Running in DRY RUN mode - no changes will be made"
+          fi
+
+          if [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
+            CMD="$CMD --create-pr"
+            if [ "${{ github.event.inputs.draft_pr }}" = "true" ]; then
+              CMD="$CMD --pr-draft"
+            fi
+          fi
+
+          if [ "${{ github.event.inputs.verbose }}" = "true" ]; then
+            CMD="$CMD --verbose"
+          fi
+
+          # Add output format
+          CMD="$CMD --output json"
+
+          echo "Executing: $CMD"
+          echo "---"
+
+          # Run and capture output
+          $CMD 2>&1 | tee healing.log
+
+          EXIT_CODE=${PIPESTATUS[0]}
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "✅ Healing completed successfully in ${DURATION}s"
+
+            # Extract PR URL if created
+            PR_URL=$(grep -o 'https://github.com/.*/pull/[0-9]*' healing.log | head -1 || echo "")
+            if [ -n "$PR_URL" ]; then
+              echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+              echo "📝 Created PR: $PR_URL"
+            fi
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Healing failed with exit code $EXIT_CODE after ${DURATION}s"
+          fi
+
+          # Parse attempts from log
+          ATTEMPTS=$(grep -c "Attempt [0-9]*" healing.log || echo "0")
+          echo "attempts=$ATTEMPTS" >> $GITHUB_OUTPUT
+
+          exit $EXIT_CODE
+
+      - name: Parse healing results
+        id: parse
+        if: always()
+        run: |
+          # Try to parse JSON output if available
+          if [ -f ".lazarus/reports/latest.json" ]; then
+            echo "has_json=true" >> $GITHUB_OUTPUT
+
+            # Extract key metrics
+            SUCCESS=$(jq -r '.success // false' .lazarus/reports/latest.json)
+            FIXED=$(jq -r '.fixed // false' .lazarus/reports/latest.json)
+            CHANGES=$(jq -r '.changes // []' .lazarus/reports/latest.json | jq length)
+
+            echo "success=$SUCCESS" >> $GITHUB_OUTPUT
+            echo "fixed=$FIXED" >> $GITHUB_OUTPUT
+            echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+          else
+            echo "has_json=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload healing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-manual-${{ github.run_id }}
+          path: |
+            healing.log
+            .lazarus/logs/**
+            .lazarus/reports/**
+            .lazarus/history/**
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Generate detailed summary
+        if: always()
+        run: |
+          echo "# 🔧 Lazarus Manual Healing Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Script** | \`${{ github.event.inputs.script_path }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Result** | ${{ steps.healing.outputs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Exit Code** | ${{ steps.healing.outputs.exit_code }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Duration** | ${{ steps.healing.outputs.duration }}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Attempts** | ${{ steps.healing.outputs.attempts }} / ${{ github.event.inputs.max_attempts }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Python** | ${{ github.event.inputs.python_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Runner** | ${{ github.event.inputs.runner_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dry Run** | ${{ github.event.inputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add PR info if created
+          if [ -n "${{ steps.healing.outputs.pr_url }}" ]; then
+            echo "## 📝 Pull Request Created" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[${{ steps.healing.outputs.pr_url }}](${{ steps.healing.outputs.pr_url }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ github.event.inputs.draft_pr }}" = "true" ]; then
+              echo "*Created as draft - review and mark as ready when appropriate*" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add result details
+          echo "## 📊 Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.healing.outputs.result }}" = "success" ]; then
+            echo "✅ **Healing Successful**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${{ steps.parse.outputs.has_json }}" = "true" ]; then
+              echo "- Fixed: ${{ steps.parse.outputs.fixed }}" >> $GITHUB_STEP_SUMMARY
+              echo "- Changes made: ${{ steps.parse.outputs.changes }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ **Healing Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The healing process was unable to fix the script. Review the logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add log excerpt
+          echo "## 📋 Log Excerpt (Last 30 Lines)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -n 30 healing.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No log available"
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add full JSON report if available
+          if [ "${{ steps.parse.outputs.has_json }}" = "true" ]; then
+            echo "## 📄 Full Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Click to expand JSON report</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat .lazarus/reports/latest.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add next steps
+          echo "## 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.healing.outputs.result }}" = "success" ]; then
+            if [ -n "${{ steps.healing.outputs.pr_url }}" ]; then
+              echo "1. Review the [pull request](${{ steps.healing.outputs.pr_url }})" >> $GITHUB_STEP_SUMMARY
+              echo "2. Test the fix in your environment" >> $GITHUB_STEP_SUMMARY
+              echo "3. Merge the PR if the fix is satisfactory" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "1. Review the changes in your working directory" >> $GITHUB_STEP_SUMMARY
+              echo "2. Test the fix manually" >> $GITHUB_STEP_SUMMARY
+              echo "3. Commit the changes if satisfactory" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "1. [Download artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed analysis" >> $GITHUB_STEP_SUMMARY
+            echo "2. Review healing logs to understand why the fix failed" >> $GITHUB_STEP_SUMMARY
+            echo "3. Consider manual intervention or adjusting healing parameters" >> $GITHUB_STEP_SUMMARY
+            echo "4. Check if the script needs infrastructure or dependency changes" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on failure
+        if: failure() && github.event.inputs.notification_level != 'none'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || github.token }}
+          script: |
+            const title = `🚨 Manual Healing Failed: ${process.env.SCRIPT_PATH}`;
+            const body = `
+            ## Manual Healing Failure
+
+            A manually triggered healing workflow has failed.
+
+            **Script:** \`${{ github.event.inputs.script_path }}\`
+            **Triggered by:** @${context.actor}
+            **Run:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            **Configuration:**
+            - Max attempts: ${{ github.event.inputs.max_attempts }}
+            - Timeout: ${{ github.event.inputs.timeout_minutes }} minutes
+            - Dry run: ${{ github.event.inputs.dry_run }}
+
+            **Actions Required:**
+            1. Review the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Check the downloaded artifacts for detailed information
+            3. Consider manual debugging or adjusting parameters
+
+            ---
+            *Automatically created by Lazarus manual healing workflow*
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['lazarus', 'manual-healing', 'failure'],
+              assignees: [context.actor]
+            });

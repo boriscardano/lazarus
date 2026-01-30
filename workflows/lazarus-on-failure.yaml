@@ -1,0 +1,280 @@
+name: Lazarus Healing on Failure
+
+# This is a reusable workflow that can be called from other workflows
+# when a script or job fails and needs healing
+on:
+  workflow_call:
+    inputs:
+      script_path:
+        description: 'Path to the failing script (required)'
+        required: true
+        type: string
+      max_attempts:
+        description: 'Maximum number of healing attempts'
+        required: false
+        type: number
+        default: 3
+      create_pr:
+        description: 'Whether to create a PR with the fix'
+        required: false
+        type: boolean
+        default: true
+      timeout_minutes:
+        description: 'Timeout for the healing process in minutes'
+        required: false
+        type: number
+        default: 15
+      working_directory:
+        description: 'Working directory for script execution'
+        required: false
+        type: string
+        default: '.'
+      continue_on_error:
+        description: 'Whether to continue if healing fails'
+        required: false
+        type: boolean
+        default: false
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.11'
+      runner:
+        description: 'Runner to use (e.g., ubuntu-latest, self-hosted)'
+        required: false
+        type: string
+        default: 'self-hosted'
+
+    secrets:
+      ANTHROPIC_API_KEY:
+        description: 'Anthropic API key for Claude Code'
+        required: true
+      GH_TOKEN:
+        description: 'GitHub token with repo and PR permissions'
+        required: false
+
+    outputs:
+      healing_result:
+        description: 'Result of the healing process (success/failure)'
+        value: ${{ jobs.heal.outputs.result }}
+      pr_url:
+        description: 'URL of the created PR (if applicable)'
+        value: ${{ jobs.heal.outputs.pr_url }}
+      exit_code:
+        description: 'Exit code from the healing process'
+        value: ${{ jobs.heal.outputs.exit_code }}
+      attempts_made:
+        description: 'Number of healing attempts made'
+        value: ${{ jobs.heal.outputs.attempts_made }}
+
+jobs:
+  heal:
+    name: Heal Failed Script
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    continue-on-error: ${{ inputs.continue_on_error }}
+
+    permissions:
+      contents: write       # To create branches and commits
+      pull-requests: write  # To create PRs
+      issues: write         # To comment on issues
+
+    outputs:
+      result: ${{ steps.healing.outputs.result }}
+      pr_url: ${{ steps.healing.outputs.pr_url }}
+      exit_code: ${{ steps.healing.outputs.exit_code }}
+      attempts_made: ${{ steps.healing.outputs.attempts_made }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+
+      - name: Cache Lazarus installation
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/lib/python${{ inputs.python_version }}/site-packages
+          key: ${{ runner.os }}-lazarus-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-lazarus-
+
+      - name: Install Lazarus
+        run: |
+          python -m pip install --upgrade pip
+          pip install lazarus-heal
+
+      - name: Verify script exists
+        id: verify
+        run: |
+          if [ ! -f "${{ inputs.script_path }}" ]; then
+            echo "❌ Script not found: ${{ inputs.script_path }}"
+            echo "exists=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ Script found: ${{ inputs.script_path }}"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Lazarus healing
+        id: healing
+        if: steps.verify.outputs.exists == 'true'
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          set +e  # Don't exit on error
+
+          echo "🔧 Starting Lazarus healing process..."
+          echo "Script: ${{ inputs.script_path }}"
+          echo "Max attempts: ${{ inputs.max_attempts }}"
+          echo "Create PR: ${{ inputs.create_pr }}"
+
+          # Build healing command
+          CMD="lazarus heal ${{ inputs.script_path }}"
+          CMD="$CMD --max-attempts ${{ inputs.max_attempts }}"
+
+          if [ "${{ inputs.create_pr }}" = "true" ]; then
+            CMD="$CMD --create-pr"
+            CMD="$CMD --pr-draft=false"
+          fi
+
+          # Add verbose output for better debugging
+          CMD="$CMD --verbose"
+
+          echo "Executing: $CMD"
+          echo "---"
+
+          # Run healing and capture output
+          $CMD 2>&1 | tee healing.log
+
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          # Parse healing results
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "✅ Healing completed successfully"
+
+            # Try to extract PR URL from output
+            PR_URL=$(grep -o 'https://github.com/.*/pull/[0-9]*' healing.log | head -1 || echo "")
+            if [ -n "$PR_URL" ]; then
+              echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+              echo "📝 Created PR: $PR_URL"
+            fi
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Healing failed with exit code $EXIT_CODE"
+          fi
+
+          # Extract attempts made
+          ATTEMPTS=$(grep -o "Attempt [0-9]*" healing.log | tail -1 | grep -o "[0-9]*" || echo "0")
+          echo "attempts_made=$ATTEMPTS" >> $GITHUB_OUTPUT
+          echo "📊 Attempts made: $ATTEMPTS"
+
+          exit $EXIT_CODE
+
+      - name: Upload healing logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            healing.log
+            .lazarus/logs/
+            .lazarus/history/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Generate healing report
+        if: always()
+        id: report
+        run: |
+          echo "# Lazarus Healing Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Overview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Script | \`${{ inputs.script_path }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Result | ${{ steps.healing.outputs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Exit Code | ${{ steps.healing.outputs.exit_code }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Attempts | ${{ steps.healing.outputs.attempts_made }} / ${{ inputs.max_attempts }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Duration | ${{ job.duration }} seconds |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ steps.healing.outputs.pr_url }}" ]; then
+            echo "## Created Pull Request" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🔗 [${{ steps.healing.outputs.pr_url }}](${{ steps.healing.outputs.pr_url }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add error details if healing failed
+          if [ "${{ steps.healing.outputs.result }}" = "failure" ]; then
+            echo "## Error Details" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 50 healing.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No log available"
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add healing history
+          if [ -f ".lazarus/history/latest.json" ]; then
+            echo "## Healing History" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat .lazarus/history/latest.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR with healing results
+        if: github.event_name == 'pull_request' && steps.healing.outputs.pr_url != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN || github.token }}
+          script: |
+            const result = '${{ steps.healing.outputs.result }}';
+            const prUrl = '${{ steps.healing.outputs.pr_url }}';
+            const scriptPath = '${{ inputs.script_path }}';
+
+            const icon = result === 'success' ? '✅' : '❌';
+            const body = `
+            ${icon} **Lazarus Healing ${result === 'success' ? 'Successful' : 'Failed'}**
+
+            Script \`${scriptPath}\` has been processed by Lazarus.
+
+            **Result:** ${result}
+            **Attempts:** ${{ steps.healing.outputs.attempts_made }} / ${{ inputs.max_attempts }}
+
+            ${result === 'success' && prUrl ? `**Fix PR:** ${prUrl}` : ''}
+
+            <details>
+            <summary>View Details</summary>
+
+            - **Run ID:** ${{ github.run_id }}
+            - **Workflow:** ${context.workflow}
+            - **Exit Code:** ${{ steps.healing.outputs.exit_code }}
+
+            [View full logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            </details>
+            `;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });

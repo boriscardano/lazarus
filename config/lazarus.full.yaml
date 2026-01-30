@@ -1,0 +1,335 @@
+# Complete Lazarus Configuration
+# This file demonstrates all available configuration options with detailed comments.
+#
+# Environment variables can be referenced using ${VAR_NAME} syntax.
+# You can also provide defaults: ${VAR_NAME:-default_value}
+
+# =============================================================================
+# SCRIPTS CONFIGURATION
+# =============================================================================
+# List of scripts that Lazarus will monitor and heal when they fail.
+
+scripts:
+  # Example 1: Python script with full configuration
+  - name: data-pipeline
+    path: scripts/data_pipeline.py
+    description: |
+      Daily data pipeline that fetches user analytics from the database,
+      processes them, and uploads results to S3. Runs at 3 AM daily.
+
+    # Cron schedule for automated runs (optional)
+    # Format: minute hour day month day-of-week
+    schedule: "0 3 * * *"
+
+    # Maximum execution time in seconds (default: 300)
+    timeout: 600
+
+    # Working directory for script execution (optional)
+    working_dir: scripts
+
+    # Files Claude Code is allowed to modify when healing this script
+    # Use glob patterns
+    allowed_files:
+      - "scripts/data_pipeline.py"
+      - "scripts/pipeline_utils.py"
+      - "scripts/config.json"
+      - "requirements.txt"
+
+    # Files Claude Code must never modify
+    forbidden_files:
+      - "scripts/production_secrets.py"
+      - ".env"
+      - "*.key"
+
+    # Required environment variables (names only, not values)
+    # These will be checked before running the script
+    environment:
+      - DATABASE_URL
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - S3_BUCKET
+
+    # Commands to run before executing the script
+    setup_commands:
+      - "pip install -r requirements.txt --quiet"
+      - "python scripts/validate_config.py"
+
+    # Additional context to help Claude Code understand this script
+    custom_prompt: |
+      This script connects to a PostgreSQL database and uses boto3 for S3 uploads.
+      Common issues include database connection timeouts and S3 permission errors.
+      The script should be idempotent - running it multiple times should be safe.
+
+    # Whether the script is safe to re-run (default: true)
+    idempotent: true
+
+    # Custom success criteria beyond exit code 0
+    success_criteria:
+      contains: "Pipeline completed successfully"
+      not_contains: "ERROR"
+
+  # Example 2: Shell script with minimal configuration
+  - name: backup-database
+    path: scripts/backup.sh
+    description: Creates compressed backup of the production database
+    schedule: "0 2 * * *"
+    timeout: 1800  # 30 minutes for large database
+    allowed_files:
+      - "scripts/backup.sh"
+      - "scripts/backup_config.sh"
+
+  # Example 3: Node.js script
+  - name: send-reports
+    path: scripts/send_reports.js
+    description: Generates and emails weekly reports to stakeholders
+    schedule: "0 9 * * MON"  # Every Monday at 9 AM
+    timeout: 300
+    environment:
+      - SMTP_HOST
+      - SMTP_PORT
+      - EMAIL_FROM
+      - EMAIL_TO
+    setup_commands:
+      - "npm install"
+    allowed_files:
+      - "scripts/send_reports.js"
+      - "scripts/report_template.html"
+      - "package.json"
+
+# =============================================================================
+# HEALING CONFIGURATION
+# =============================================================================
+# Controls how Lazarus attempts to heal failing scripts.
+
+healing:
+  # Maximum number of healing attempts before giving up (1-10, default: 3)
+  max_attempts: 3
+
+  # Maximum time for each healing attempt in seconds (30-3600, default: 300)
+  timeout_per_attempt: 300
+
+  # Maximum total time for all healing attempts in seconds (60-7200, default: 900)
+  total_timeout: 900
+
+  # Claude model to use for healing (default: claude-sonnet-4-5-20250929)
+  # Options: claude-sonnet-4-5-20250929, claude-opus-4-5-20251101
+  claude_model: claude-sonnet-4-5-20250929
+
+  # Maximum conversation turns with Claude per healing session (1-100, default: 30)
+  max_turns: 30
+
+  # Specific tools Claude Code can use (empty list = all tools allowed)
+  # Leave empty for best results, or specify tools if you need restrictions
+  allowed_tools: []
+
+  # Tools Claude Code is forbidden from using
+  # Useful if you want to prevent certain operations
+  # Example: ["Bash", "Write"] to prevent shell commands and file creation
+  forbidden_tools: []
+
+# =============================================================================
+# NOTIFICATION CONFIGURATION
+# =============================================================================
+# Configure how and when Lazarus sends notifications about healing results.
+
+notifications:
+  # Slack notifications via webhook
+  slack:
+    # Webhook URL (use environment variable for security)
+    webhook_url: ${SLACK_WEBHOOK_URL}
+
+    # Optional: Override the default channel
+    # channel: "#lazarus-alerts"
+
+    # Send notification on successful healing (default: true)
+    on_success: true
+
+    # Send notification on failed healing (default: true)
+    on_failure: true
+
+  # Discord notifications via webhook
+  discord:
+    webhook_url: ${DISCORD_WEBHOOK_URL}
+    on_success: true
+    on_failure: true
+
+  # Email notifications
+  email:
+    # SMTP server configuration
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+
+    # Credentials (use environment variables)
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+
+    # Email addresses
+    from_addr: lazarus@example.com
+    to_addrs:
+      - devops@example.com
+      - alerts@example.com
+
+    # Notification preferences
+    on_success: false  # Don't email on success, only failures
+    on_failure: true
+
+    # Use TLS encryption (default: true)
+    use_tls: true
+
+  # GitHub Issues - create issues for failures
+  github_issues:
+    # Repository in format 'owner/repo'
+    repo: yourusername/your-repo
+
+    # Labels to apply to created issues
+    labels:
+      - lazarus
+      - auto-heal
+      - bug
+
+    # Only create issues on failure (success doesn't make sense)
+    on_failure: true
+
+    # Optional: Assign issues to specific users
+    assignees:
+      - devops-oncall
+
+  # Custom webhook for integration with other tools
+  webhook:
+    url: https://your-monitoring-system.com/api/webhooks/lazarus
+
+    # Optional: Custom headers
+    headers:
+      Authorization: "Bearer ${WEBHOOK_TOKEN}"
+      X-Source: "Lazarus"
+
+    on_success: true
+    on_failure: true
+
+    # HTTP method (default: POST)
+    # Options: GET, POST, PUT, PATCH
+    method: POST
+
+# =============================================================================
+# GIT CONFIGURATION
+# =============================================================================
+# Controls how Lazarus creates branches and pull requests.
+
+git:
+  # Whether to automatically create pull requests (default: true)
+  # If false, Lazarus will push branches but not create PRs
+  create_pr: true
+
+  # Prefix for healing branches (default: lazarus/fix)
+  # Branch name will be: {prefix}-{script-name}-{timestamp}
+  branch_prefix: lazarus/fix
+
+  # Create PRs as drafts (default: false)
+  # Useful if you want manual review before making PRs visible
+  draft_pr: false
+
+  # Enable auto-merge if all checks pass (default: false)
+  # Only works if your repository has required checks configured
+  auto_merge: false
+
+  # Optional: Custom commit message template
+  # Available variables: {script_name}, {error_summary}, {attempt_count}
+  commit_message_template: |
+    fix: Auto-heal {script_name}
+
+    Original error: {error_summary}
+    Healing attempts: {attempt_count}
+
+    Co-Authored-By: Lazarus <noreply@lazarus.dev>
+
+  # Optional: Custom PR title template
+  pr_title_template: "fix: Lazarus auto-heal for {script_name}"
+
+  # Optional: Custom PR body template
+  pr_body_template: |
+    ## Automated Healing Summary
+
+    **Script:** `{script_name}`
+    **Status:** {status}
+    **Attempts:** {attempt_count}
+
+    ### Original Error
+    ```
+    {error_message}
+    ```
+
+    ### Changes Made
+    {changes_summary}
+
+    ### Testing
+    - [ ] Review the changes
+    - [ ] Test the script locally
+    - [ ] Verify the fix in staging
+
+    ---
+    *This PR was created automatically by Lazarus*
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+# Controls how Lazarus handles sensitive information.
+
+security:
+  # Built-in regex patterns for detecting secrets
+  # These patterns are applied to all captured output, environment variables,
+  # and file contents before sending to Claude Code or storing in logs.
+  redact_patterns:
+    - '(?i)(api[_-]?key|apikey)[\s=:]+[''"]?([a-zA-Z0-9_\-]{20,})[''"]?'
+    - '(?i)(token|access[_-]?token)[\s=:]+[''"]?([a-zA-Z0-9_\-\.]{20,})[''"]?'
+    - '(?i)(secret|client[_-]?secret)[\s=:]+[''"]?([a-zA-Z0-9_\-]{20,})[''"]?'
+    - '(?i)(password|passwd|pwd)[\s=:]+[''"]?([^\s''\"]{8,})[''"]?'
+    - '(?i)(bearer\s+[a-zA-Z0-9_\-\.]+)'
+    - '(?i)(authorization:\s*[a-zA-Z0-9_\-\.]+)'
+    - '(?i)(aws[_-]?access[_-]?key[_-]?id)[\s=:]+[''"]?([A-Z0-9]{20})[''"]?'
+    - '(?i)(aws[_-]?secret[_-]?access[_-]?key)[\s=:]+[''"]?([a-zA-Z0-9/+=]{40})[''"]?'
+    - '(?i)(private[_-]?key|rsa[_-]?private[_-]?key)'
+    - '(?i)(BEGIN\s+(RSA\s+)?PRIVATE\s+KEY)'
+
+  # Additional custom patterns for your specific use case
+  additional_patterns:
+    - '(?i)(database[_-]?url)[\s=:]+[''"]?([^\s''\"]+)[''"]?'
+    - '(?i)(stripe[_-]?key)[\s=:]+[''"]?([^\s''\"]+)[''"]?'
+
+  # Environment variables that are safe to expose in logs and prompts
+  # All other environment variables will be redacted
+  safe_env_vars:
+    - PATH
+    - HOME
+    - USER
+    - SHELL
+    - LANG
+    - PWD
+    - TERM
+    - TMPDIR
+    - NODE_ENV
+    - PYTHON_VERSION
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+# Controls how Lazarus logs its activities.
+
+logging:
+  # Log level (default: INFO)
+  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log format string (Python logging format)
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Optional: Write logs to a file
+  file: logs/lazarus.log
+
+  # Log rotation size in MB (0 = no rotation, default: 10)
+  rotation: 10
+
+  # Number of rotated log files to keep (default: 10)
+  retention: 10
+
+  # Also log to console (default: true)
+  console: true

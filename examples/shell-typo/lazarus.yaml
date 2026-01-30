@@ -1,0 +1,25 @@
+version: "1"
+
+scripts:
+  - name: "daily-backup"
+    path: "./backup.sh"
+    description: "Daily backup of critical directories"
+    schedule: "0 2 * * *"  # Run at 2 AM daily
+
+healing:
+  max_attempts: 3
+  timeout_per_attempt: 180
+  total_timeout: 400
+  allowed_files:
+    - "backup.sh"
+
+notifications:
+  # Example: Enable notifications
+  # email:
+  #   to: "ops@example.com"
+  #   on_failure: true
+
+git:
+  create_pr: true
+  branch_prefix: "lazarus/fix"
+  draft_pr: false
