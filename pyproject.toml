@@ -59,11 +59,11 @@ dev = [
 lazarus = "lazarus.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/lazarus"
-Documentation = "https://github.com/yourusername/lazarus#readme"
-Repository = "https://github.com/yourusername/lazarus.git"
-Issues = "https://github.com/yourusername/lazarus/issues"
-Changelog = "https://github.com/yourusername/lazarus/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/boriscardano/lazarus"
+Documentation = "https://github.com/boriscardano/lazarus#readme"
+Repository = "https://github.com/boriscardano/lazarus.git"
+Issues = "https://github.com/boriscardano/lazarus/issues"
+Changelog = "https://github.com/boriscardano/lazarus/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lazarus"]

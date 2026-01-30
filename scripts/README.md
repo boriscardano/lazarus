@@ -146,7 +146,7 @@ Workflow setup script that configures GitHub Actions workflows for automated hea
 
 ```bash
 # Clone repository (if not using pip)
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 
 # Install
@@ -160,7 +160,7 @@ lazarus check
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/lazarus.git
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
 
 # Install in development mode

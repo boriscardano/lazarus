@@ -14,7 +14,7 @@ This directory contains comprehensive guides and scripts for setting up GitHub A
 ./scripts/configure-launchd.sh
 
 # 3. Install Claude Code
-pip3 install claude-code
+uv pip install claude-code
 claude auth login
 
 # 4. Verify everything is working
@@ -31,7 +31,7 @@ claude auth login
 sudo ./scripts/configure-systemd.sh
 
 # 3. Install Claude Code
-pip3 install claude-code
+uv pip install claude-code
 claude auth login
 
 # 4. Verify everything is working

@@ -153,7 +153,7 @@ pytest --capture=no
 
 ```bash
 # Install pytest-xdist first
-pip install pytest-xdist
+uv pip install pytest-xdist
 
 # Run tests in parallel (auto-detect CPU count)
 pytest -n auto
@@ -435,7 +435,7 @@ Install pre-commit hooks to run tests before committing:
 
 ```bash
 # Install pre-commit
-pip install pre-commit
+uv pip install pre-commit
 
 # Install hooks
 pre-commit install
@@ -449,7 +449,7 @@ pre-commit run --all-files
 ### Tests Fail Locally But Pass in CI
 
 - Check Python version matches CI (3.11+)
-- Ensure all dependencies are installed: `pip install -e ".[dev]"`
+- Ensure all dependencies are installed: `uv pip install -e ".[dev]"`
 - Clear pytest cache: `pytest --cache-clear`
 
 ### Flaky Tests
@@ -471,7 +471,7 @@ If a test fails intermittently:
 
 ```bash
 # Install package in editable mode
-pip install -e .
+uv pip install -e .
 
 # Or set PYTHONPATH
 export PYTHONPATH=/path/to/lazarus/src:$PYTHONPATH
