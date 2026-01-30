@@ -8,9 +8,12 @@ Complete reference for the Lazarus command-line interface.
 # Install from PyPI (when published)
 pip install lazarus-heal
 
-# Or install from source
-git clone https://github.com/yourusername/lazarus.git
+# Or install from source (recommended: use uv)
+git clone https://github.com/boriscardano/lazarus.git
 cd lazarus
+uv pip install -e .
+
+# Or with pip
 pip install -e .
 ```
 
@@ -240,6 +243,50 @@ lazarus init --force
 - Notification configurations
 - Advanced security settings
 - Comprehensive logging options
+
+---
+
+### diagnose
+
+Diagnose a script without making changes (read-only analysis).
+
+**Usage:**
+```bash
+lazarus diagnose SCRIPT_PATH [OPTIONS]
+```
+
+**Arguments:**
+- `SCRIPT_PATH`: Path to the script to diagnose (required)
+
+**Options:**
+- `--timeout, -t INTEGER`: Timeout in seconds for analysis
+  - Min: 60
+  - Default: 300
+- `--verbose, -v`: Show detailed output
+- `--config, -c PATH`: Path to lazarus.yaml (auto-detected if not provided)
+
+**Examples:**
+```bash
+# Diagnose a failing script
+lazarus diagnose scripts/backup.py
+
+# With verbose output
+lazarus diagnose scripts/complex.py --verbose
+
+# Custom timeout
+lazarus diagnose scripts/slow.py --timeout 600
+```
+
+**Notes:**
+- This is a read-only operation - no files are modified
+- Claude Code is restricted to using only the Read tool
+- Useful for understanding issues before deciding to heal
+- Returns diagnosis with suggested fixes but does not apply them
+
+**Exit Codes:**
+- `0`: Analysis completed successfully
+- `1`: Analysis failed
+- `2`: Configuration or file error
 
 ---
 

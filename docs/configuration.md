@@ -92,8 +92,9 @@ Define scripts to monitor and heal. Each script has its own configuration.
 | `name` | string | Yes | - | Human-readable name for the script |
 | `path` | path | Yes | - | Path to script file (relative to repo root) |
 | `description` | string | No | null | Description of what the script does |
+| `script_type` | string | No | auto-detected | Script type: `python`, `shell`, `node`, `other` |
 | `schedule` | string | No | null | Cron expression for scheduled runs |
-| `timeout` | int | No | 300 | Execution timeout in seconds (1-86400) |
+| `timeout` | int | No | per-type default | Execution timeout in seconds (1-86400) |
 | `working_dir` | path | No | null | Working directory for script execution |
 | `allowed_files` | list[str] | No | [] | Glob patterns for files Claude can modify |
 | `forbidden_files` | list[str] | No | [] | Glob patterns for files Claude cannot modify |
@@ -133,6 +134,19 @@ scripts:
       exit_code: 0
       contains: "Backup completed successfully"
 ```
+
+### Script Type and Default Timeouts
+
+The `script_type` field determines the default timeout if not explicitly set:
+
+| Script Type | Default Timeout | Auto-Detection |
+|-------------|-----------------|----------------|
+| `python` | 60 seconds | `.py` extension |
+| `shell` | 180 seconds | `.sh`, `.bash` extensions |
+| `node` | 90 seconds | `.js`, `.mjs`, `.ts` extensions |
+| `other` | 120 seconds | All other extensions |
+
+Shell scripts have longer default timeouts because they often run external commands that may take time. You can always override these defaults by explicitly setting the `timeout` field.
 
 ### Cron Schedule Format
 
